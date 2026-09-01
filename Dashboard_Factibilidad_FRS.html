@@ -1,0 +1,2470 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard de Factibilidad FRS — CIS y Clusterización</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@zip.js/zip.js@2.8.30/dist/zip.min.js"></script>
+<style>
+  :root{
+    --wv-orange:#F2591C;
+    --wv-orange-dark:#C7440F;
+    --wv-orange-light:#FDECE3;
+    --wv-charcoal:#26262A;
+    --wv-gray:#6B6B70;
+    --wv-gray-light:#9A9A9E;
+    --wv-bg:#FFFFFF;
+    --wv-bg-soft:#F7F5F3;
+    --wv-border:#E7E3DF;
+    --wv-green:#1E7D3A;
+    --wv-green-bg:#E7F4EA;
+    --wv-amber:#B26A00;
+    --wv-amber-bg:#FCEEDC;
+    --wv-red:#C22B2B;
+    --wv-red-bg:#FBE9E9;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(38,38,42,0.06), 0 4px 16px rgba(38,38,42,0.05);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    background:var(--wv-bg-soft);
+    color:var(--wv-charcoal);
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--wv-orange-dark);}
+
+  /* ---------- Header ---------- */
+  header.topbar{
+    background:var(--wv-bg);
+    border-bottom:1px solid var(--wv-border);
+    padding:18px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+    position:sticky;
+    top:0;
+    z-index:50;
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-mark{
+    width:40px;height:40px;border-radius:10px;
+    background:linear-gradient(135deg,var(--wv-orange),var(--wv-orange-dark));
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;
+    flex:none;
+  }
+  .brand-text h1{margin:0;font-size:16px;font-weight:700;color:var(--wv-charcoal);letter-spacing:-.01em;}
+  .brand-text p{margin:2px 0 0;font-size:12.5px;color:var(--wv-gray);}
+
+  .upload-zone{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .header-status{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .file-btn.small{padding:8px 13px;font-size:12.5px;}
+  .file-btn{
+    background:var(--wv-orange);
+    color:#fff;
+    border:none;
+    padding:10px 16px;
+    border-radius:10px;
+    font-weight:600;
+    font-size:13.5px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    transition:background .15s ease, transform .1s ease;
+  }
+  .file-btn:hover{background:var(--wv-orange-dark);}
+  .file-btn:active{transform:translateY(1px);}
+  .file-btn:focus-visible, button:focus-visible, select:focus-visible{
+    outline:3px solid #ffd8c4; outline-offset:2px;
+  }
+  #fileInput{display:none;}
+  .load-status{font-size:12.5px;color:var(--wv-gray);max-width:280px;line-height:1.4;}
+  .load-status strong{color:var(--wv-charcoal);}
+
+  /* ---------- Panel de fuente de datos ---------- */
+  .data-source-panel{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;
+    max-width:640px;margin:0 auto;
+  }
+  .ds-card{
+    background:var(--wv-bg);border:1px solid var(--wv-border);border-radius:var(--radius);
+    padding:16px 18px;box-shadow:var(--shadow);
+  }
+  .ds-card h3{margin:0 0 4px;font-size:14px;font-weight:700;}
+  .ds-info{margin:0 0 12px;font-size:12px;color:var(--wv-gray);}
+  .ds-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .ds-row input[type="password"]{
+    flex:1;min-width:180px;padding:9px 12px;border-radius:10px;border:1px solid var(--wv-border);
+    font-size:13px;font-family:inherit;color:var(--wv-charcoal);
+  }
+  .ds-hint{margin:10px 0 0;font-size:11px;color:var(--wv-gray-light);line-height:1.5;}
+
+  /* ---------- Tabs ---------- */
+  nav.tabs{
+    display:flex;gap:4px;
+    padding:10px 24px 0;
+    background:var(--wv-bg);
+    border-bottom:1px solid var(--wv-border);
+  }
+  .tab-btn{
+    background:none;border:none;
+    padding:10px 18px;
+    font-size:14px;font-weight:600;
+    color:var(--wv-gray);
+    cursor:pointer;
+    border-bottom:3px solid transparent;
+    margin-bottom:-1px;
+  }
+  .tab-btn.active{color:var(--wv-orange-dark);border-bottom-color:var(--wv-orange);}
+  .tab-btn:hover:not(.active){color:var(--wv-charcoal);}
+
+  main{max-width:1180px;margin:0 auto;padding:24px;}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  /* ---------- Empty state ---------- */
+  .empty-state{
+    background:var(--wv-bg);
+    border:1.5px dashed var(--wv-border);
+    border-radius:var(--radius);
+    padding:48px 24px;
+    text-align:center;
+    color:var(--wv-gray);
+  }
+  .empty-state .icon{font-size:34px;margin-bottom:10px;}
+  .empty-state h2{margin:0 0 6px;font-size:17px;color:var(--wv-charcoal);}
+  .empty-state p{margin:0;font-size:13.5px;}
+
+  .error-banner{
+    background:var(--wv-red-bg);
+    color:var(--wv-red);
+    border:1px solid #f0c4c4;
+    border-radius:10px;
+    padding:12px 16px;
+    font-size:13.5px;
+    margin-bottom:16px;
+    display:none;
+  }
+  .error-banner.show{display:block;}
+
+  /* ---------- KPI cards ---------- */
+  .kpi-row{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    gap:14px;
+    margin-bottom:20px;
+  }
+  .kpi-card{
+    background:var(--wv-bg);
+    border:1px solid var(--wv-border);
+    border-radius:var(--radius);
+    padding:18px 20px;
+    box-shadow:var(--shadow);
+  }
+  .kpi-card .label{font-size:12.5px;color:var(--wv-gray);font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+  .kpi-card .value{font-size:30px;font-weight:800;color:var(--wv-charcoal);margin-top:4px;line-height:1.1;}
+  .kpi-card .sub{font-size:12.5px;color:var(--wv-gray-light);margin-top:6px;}
+  .kpi-card.accent{border-color:var(--wv-orange);}
+  .kpi-card.accent .value{color:var(--wv-orange-dark);}
+
+  /* ---------- Section blocks ---------- */
+  .section{
+    background:var(--wv-bg);
+    border:1px solid var(--wv-border);
+    border-radius:var(--radius);
+    padding:20px;
+    margin-bottom:20px;
+    box-shadow:var(--shadow);
+  }
+  .section h2{margin:0 0 4px;font-size:15px;font-weight:700;}
+  .section .section-sub{margin:0 0 16px;font-size:12.5px;color:var(--wv-gray);}
+
+  .chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;}
+  .bar-list{display:flex;flex-direction:column;gap:10px;}
+  .bar-row{display:grid;grid-template-columns:110px 1fr 46px;align-items:center;gap:10px;font-size:12.5px;}
+  .bar-row .m-label{color:var(--wv-charcoal);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bar-track{background:var(--wv-bg-soft);border-radius:6px;height:14px;overflow:hidden;border:1px solid var(--wv-border);}
+  .bar-fill{height:100%;border-radius:6px 0 0 6px;transition:width .4s ease;}
+  .bar-row .m-value{text-align:right;color:var(--wv-gray);font-variant-numeric:tabular-nums;}
+
+  #mapGeneral, #mapDetail{
+    width:100%;height:380px;border-radius:12px;overflow:hidden;border:1px solid var(--wv-border);
+  }
+  .leaflet-tooltip.cis-tooltip{
+    background:var(--wv-bg);border:1px solid var(--wv-border);border-radius:10px;
+    box-shadow:0 6px 18px rgba(38,38,42,0.16);padding:9px 11px;
+  }
+  .leaflet-tooltip.cis-tooltip::before{border-top-color:var(--wv-border);}
+
+  /* ---------- Pantalla completa del mapa ---------- */
+  .map-wrap{position:relative;}
+  .map-wrap.fullscreen{
+    position:fixed;inset:0;z-index:1000;
+    background:var(--wv-bg);
+    padding:18px 24px 24px;
+    display:flex;flex-direction:column;
+    overflow-y:auto;
+  }
+  .map-wrap.fullscreen #mapGeneral,
+  .map-wrap.fullscreen #mapDetail{
+    flex:1 1 auto;height:auto;min-height:0;
+  }
+  body.map-fullscreen-lock{overflow:hidden;}
+  .fullscreen-toggle-btn{
+    background:var(--wv-bg-soft);border:1px solid var(--wv-border);color:var(--wv-charcoal);
+    padding:9px 15px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;
+    margin-left:auto;
+  }
+  .fullscreen-toggle-btn:hover{border-color:var(--wv-charcoal);}
+  .map-wrap.fullscreen .fullscreen-toggle-btn{background:var(--wv-charcoal);color:#fff;border-color:var(--wv-charcoal);}
+
+  .legend{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:12px;font-size:12px;color:var(--wv-gray);}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+
+  /* ---------- Medición de distancia por carretera ---------- */
+  .map-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+  .measure-toggle-btn{
+    background:var(--wv-bg-soft);border:1px solid var(--wv-border);color:var(--wv-charcoal);
+    padding:9px 15px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;
+  }
+  .measure-toggle-btn:hover{border-color:var(--wv-charcoal);}
+  .measure-toggle-btn.active{background:var(--wv-charcoal);color:#fff;border-color:var(--wv-charcoal);}
+  .measure-mode-group{display:none;gap:6px;flex-wrap:wrap;}
+  .mode-pill{
+    background:var(--wv-bg-soft);border:1px solid var(--wv-border);padding:8px 13px;border-radius:999px;
+    font-size:12.5px;font-weight:600;color:var(--wv-gray);cursor:pointer;font-family:inherit;
+  }
+  .mode-pill.active{background:var(--wv-orange);border-color:var(--wv-orange);color:#fff;}
+  .measure-hint{font-size:12px;color:var(--wv-gray);margin:8px 2px 0;min-height:14px;}
+  .map-select-hint{font-size:11.5px;color:var(--wv-gray-light);margin:8px 2px 0;}
+  .measure-result{
+    display:none;flex-direction:column;gap:8px;margin-top:10px;
+  }
+  .measure-list-header{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    font-size:11.5px;font-weight:700;color:var(--wv-gray);text-transform:uppercase;letter-spacing:.03em;
+    padding:0 2px;
+  }
+  .measure-clear-all-btn{
+    background:none;border:1px solid var(--wv-border);border-radius:8px;padding:6px 11px;
+    font-size:12px;color:var(--wv-gray);cursor:pointer;font-weight:600;font-family:inherit;
+    text-transform:none;letter-spacing:normal;
+  }
+  .measure-clear-all-btn:hover{border-color:var(--wv-red);color:var(--wv-red);}
+  .measure-item{
+    display:flex;align-items:center;gap:12px;
+    background:var(--wv-bg-soft);border:1px solid var(--wv-border);border-radius:12px;
+    padding:10px 14px;
+  }
+  .measure-item-badge{
+    width:22px;height:22px;border-radius:50%;color:#fff;font-size:11.5px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .measure-item-body{flex:1;min-width:0;}
+  .measure-item-main{font-size:13.5px;color:var(--wv-charcoal);}
+  .measure-item-main strong{font-weight:800;}
+  .measure-item-note{font-size:11px;color:var(--wv-amber);margin-top:2px;line-height:1.4;}
+  .measure-item-loading{font-size:13px;color:var(--wv-gray);}
+  .measure-item-remove{
+    background:none;border:1px solid var(--wv-border);border-radius:8px;width:26px;height:26px;flex-shrink:0;
+    font-size:13px;color:var(--wv-gray);cursor:pointer;font-family:inherit;
+  }
+  .measure-item-remove:hover{border-color:var(--wv-red);color:var(--wv-red);}
+  .measure-error{font-size:13px;color:var(--wv-red);}
+  .measure-pin{
+    width:24px;height:24px;border-radius:50%;background:var(--wv-charcoal);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;
+    border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);
+  }
+  .measure-line-label{
+    transform:translate(-50%,-50%);
+    background:#fff;border:2px solid var(--wv-charcoal);border-radius:999px;padding:3px 9px;
+    font-size:11.5px;font-weight:700;color:var(--wv-charcoal);white-space:nowrap;
+    box-shadow:0 1px 4px rgba(0,0,0,.25);
+  }
+
+  /* ---------- Household Geo Count ---------- */
+  .hgc-pin{
+    width:24px;height:24px;border-radius:50%;color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;
+    border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);
+  }
+  .hgc-item{
+    display:flex;align-items:flex-start;gap:12px;
+    background:var(--wv-bg-soft);border:1px solid var(--wv-border);border-radius:12px;
+    padding:10px 14px;
+  }
+  .hgc-item-body{flex:1;min-width:0;}
+  .hgc-item-main{font-size:13.5px;color:var(--wv-charcoal);margin-bottom:6px;}
+  .hgc-item-main strong{font-weight:800;}
+  .hgc-radius-row{display:flex;align-items:center;gap:10px;}
+  .hgc-slider{flex:1;accent-color:var(--wv-orange);cursor:pointer;}
+  .hgc-radius-value{font-size:11.5px;color:var(--wv-gray);font-weight:600;min-width:52px;text-align:right;flex-shrink:0;}
+  .hgc-retry{
+    background:none;border:1px solid var(--wv-red);border-radius:7px;padding:3px 9px;
+    font-size:11px;color:var(--wv-red);cursor:pointer;font-weight:700;font-family:inherit;margin-left:4px;
+  }
+  .hgc-retry:hover{background:var(--wv-red);color:#fff;}
+
+  /* ---------- Filters ---------- */
+  .filter-bar{
+    display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;
+  }
+  .filter-field{display:flex;flex-direction:column;gap:6px;min-width:190px;flex:1;position:relative;}
+  .filter-field label{font-size:12px;font-weight:600;color:var(--wv-gray);text-transform:uppercase;letter-spacing:.03em;}
+  .filter-field select{
+    padding:10px 12px;border-radius:10px;border:1px solid var(--wv-border);
+    font-size:13.5px;background:var(--wv-bg);color:var(--wv-charcoal);font-family:inherit;
+  }
+  .filter-reset{
+    background:none;border:1px solid var(--wv-border);border-radius:10px;
+    padding:10px 14px;font-size:13px;color:var(--wv-gray);cursor:pointer;font-weight:600;
+  }
+  .filter-reset:hover{border-color:var(--wv-orange);color:var(--wv-orange-dark);}
+
+  .result-count{font-size:12.5px;color:var(--wv-gray);margin:14px 0 0;}
+
+  /* ---------- Multi-select con casillas ---------- */
+  .ms-dropdown{position:relative;}
+  .ms-trigger{
+    width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:10px 12px;border-radius:10px;border:1px solid var(--wv-border);
+    font-size:13.5px;background:var(--wv-bg);color:var(--wv-charcoal);font-family:inherit;
+    cursor:pointer;text-align:left;
+  }
+  .ms-trigger:hover{border-color:var(--wv-gray-light);}
+  .ms-dropdown.open .ms-trigger{border-color:var(--wv-orange);}
+  .ms-trigger.has-selection{color:var(--wv-charcoal);font-weight:600;}
+  .ms-trigger-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ms-trigger-arrow{color:var(--wv-gray-light);font-size:11px;flex-shrink:0;transition:transform .15s ease;}
+  .ms-dropdown.open .ms-trigger-arrow{transform:rotate(180deg);}
+
+  .ms-panel{
+    display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:60;
+    background:var(--wv-bg);border:1px solid var(--wv-border);border-radius:12px;
+    box-shadow:0 8px 24px rgba(38,38,42,0.14);padding:10px;min-width:220px;
+  }
+  .ms-dropdown.open .ms-panel{display:block;}
+  .ms-search{
+    width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--wv-border);
+    font-size:13px;font-family:inherit;margin-bottom:8px;
+  }
+  .ms-actions{display:flex;gap:12px;margin-bottom:6px;padding:0 2px;}
+  .ms-action-link{
+    background:none;border:none;padding:0;font-size:11.5px;font-weight:700;
+    color:var(--wv-orange-dark);cursor:pointer;font-family:inherit;text-decoration:underline;
+  }
+  .ms-options{max-height:210px;overflow-y:auto;display:flex;flex-direction:column;}
+  .ms-option{
+    display:flex;align-items:center;gap:9px;padding:7px 6px;border-radius:7px;
+    font-size:13px;color:var(--wv-charcoal);cursor:pointer;
+  }
+  .ms-option:hover{background:var(--wv-bg-soft);}
+  .ms-option input[type="checkbox"]{flex-shrink:0;width:15px;height:15px;accent-color:var(--wv-orange);cursor:pointer;}
+  .ms-option span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ms-empty{font-size:12.5px;color:var(--wv-gray-light);padding:10px 6px;text-align:center;}
+
+  /* ---------- CIS cards ---------- */
+  .cis-grid{display:flex;flex-direction:column;gap:14px;margin-top:16px;}
+  .cis-card{
+    border:1px solid var(--wv-border);
+    border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .cis-card-head{
+    padding:14px 18px;
+    background:var(--wv-bg-soft);
+    display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;
+  }
+  .cis-card-head h3{margin:0;font-size:15px;font-weight:700;}
+  .cis-card-head .meta{font-size:12.5px;color:var(--wv-gray);margin-top:3px;}
+  .badge{
+    display:inline-block;padding:4px 11px;border-radius:999px;font-size:11.5px;font-weight:700;
+    white-space:nowrap;
+  }
+  .badge.viable{background:var(--wv-green-bg);color:var(--wv-green);}
+  .badge.condiciones{background:var(--wv-amber-bg);color:var(--wv-amber);}
+  .badge.no-viable{background:var(--wv-red-bg);color:var(--wv-red);}
+  .badge.neutro{background:var(--wv-bg-soft);color:var(--wv-gray);border:1px solid var(--wv-border);}
+
+  .cis-card-body{padding:16px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;}
+  .data-block h4{margin:0 0 8px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--wv-gray);}
+  .data-line{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;border-bottom:1px dashed var(--wv-border);}
+  .data-line:last-child{border-bottom:none;}
+  .data-line .k{color:var(--wv-gray);}
+  .data-line .v{font-weight:600;color:var(--wv-charcoal);}
+  .diff-pos{color:var(--wv-green);} .diff-neg{color:var(--wv-red);} .diff-zero{color:var(--wv-gray-light);}
+
+  .pill-group{display:flex;flex-wrap:wrap;gap:6px;}
+  .pill{
+    background:var(--wv-bg-soft);border:1px solid var(--wv-border);
+    border-radius:999px;padding:4px 10px;font-size:12px;color:var(--wv-charcoal);
+  }
+  .pill.risk{background:var(--wv-red-bg);border-color:#f0c4c4;color:var(--wv-red);}
+  .pill.ok{background:var(--wv-green-bg);border-color:#c9e6cf;color:var(--wv-green);}
+
+  .estructura-item{
+    border:1px solid var(--wv-border);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:12.5px;
+  }
+  .estructura-item:last-child{margin-bottom:0;}
+  .estructura-item .e-top{display:flex;justify-content:space-between;gap:8px;font-weight:600;}
+  .estructura-item .e-sub{color:var(--wv-gray);margin-top:3px;}
+
+  footer{text-align:center;color:var(--wv-gray-light);font-size:12px;padding:20px 0 32px;}
+
+  @media (max-width:640px){
+    header.topbar{padding:14px 16px;}
+    main{padding:16px;}
+    .map-wrap.fullscreen{padding:12px 14px 16px;}
+    .filter-field{min-width:100%;}
+    #mapGeneral, #mapDetail{height:300px;}
+    .bar-row{grid-template-columns:90px 1fr 38px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">FRS</div>
+    <div class="brand-text">
+      <h1>Factibilidad Operativa FRS</h1>
+      <p>Espacios de Impacto para la Niñez (CIS) &amp; Clusterización</p>
+    </div>
+  </div>
+  <div class="header-status">
+    <div class="load-status" id="loadStatus">Ningún dato cargado todavía.</div>
+    <button class="file-btn small" id="refreshBtn" type="button" style="display:none;">🔄 Actualizar</button>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="login">Inicio</button>
+  <button class="tab-btn" data-tab="general">General</button>
+  <button class="tab-btn" data-tab="detalle">Detalle</button>
+</nav>
+
+<main>
+  <div class="error-banner" id="errorBanner"></div>
+
+  <!-- ===================== TAB INICIO (login / fuente de datos) ===================== -->
+  <section class="tab-panel active" id="panel-login">
+    <div class="section" style="max-width:640px;margin:0 auto 24px;">
+      <h2>Conecta tus datos</h2>
+      <p class="section-sub">Elige una fuente para cargar los CIS: sube el Excel exportado de Kobo, o conéctate al repositorio privado de GitHub con tu configuración encriptada.</p>
+    </div>
+    <section class="data-source-panel">
+      <div class="ds-card">
+        <h3>📄 Subir archivo Excel (respaldo)</h3>
+        <p class="ds-info">Exportación de KoboToolbox en formato de etiquetas (.xlsx)</p>
+        <button class="file-btn" id="uploadTrigger" type="button">⬆ Cargar archivo</button>
+        <input type="file" id="fileInput" accept=".xlsx">
+      </div>
+      <div class="ds-card">
+        <h3>🔒 Datos sincronizados (GitHub privado)</h3>
+        <p class="ds-info">Repositorio privado donde un proceso automático guarda copias periódicas de los datos de Kobo.</p>
+
+        <label style="font-size:11.5px;color:var(--wv-gray);font-weight:600;display:block;margin-bottom:6px;">🔐 Cargar configuración encriptada</label>
+        <div class="ds-row" style="margin-bottom:6px;">
+          <input type="file" id="configZipInput" accept=".zip" style="flex:1;min-width:150px;font-size:12.5px;padding:8px 0;">
+          <input type="password" id="configZipPassword" placeholder="Contraseña del ZIP" autocomplete="off">
+        </div>
+        <button class="file-btn" id="configZipBtn" type="button" style="width:100%;">Cargar y conectar</button>
+        <div class="error-banner" id="configZipErrorBanner"></div>
+        <p class="ds-hint">Ruta esperada: <code>data/kobo_data.json</code>. Ningún token se guarda — solo se usa en esta sesión.</p>
+      </div>
+    </section>
+  </section>
+
+  <!-- ===================== TAB GENERAL ===================== -->
+  <section class="tab-panel" id="panel-general">
+    <div id="generalEmpty" class="empty-state">
+      <div class="icon">📊</div>
+      <h2>Todavía no hay datos cargados</h2>
+      <p>Sube el archivo Excel exportado de KoboToolbox (formato de etiquetas) usando el botón "Cargar datos de Kobo" arriba.</p>
+    </div>
+
+    <div id="generalContent" style="display:none;">
+      <div class="kpi-row">
+        <div class="kpi-card accent">
+          <div class="label">CIS identificados</div>
+          <div class="value" id="kpiGeneralCIS">0</div>
+          <div class="sub">Espacios de Impacto para la Niñez registrados</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Hogares (validados)</div>
+          <div class="value" id="kpiGeneralHogares">0</div>
+          <div class="sub">Dentro de 30 min caminando de cada CIS</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Niñez 0–10 años (validada)</div>
+          <div class="value" id="kpiGeneralNinez">0</div>
+          <div class="sub" id="kpiGeneralNinezSub">0 niños · 0 niñas</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Indicadores por municipio</h2>
+        <p class="section-sub">CIS, hogares y niñez validada agrupados por municipio</p>
+        <div class="chart-grid">
+          <div>
+            <div style="font-size:12.5px;font-weight:700;margin-bottom:8px;color:var(--wv-gray);">CIS por municipio</div>
+            <div class="bar-list" id="chartCIS"></div>
+          </div>
+          <div>
+            <div style="font-size:12.5px;font-weight:700;margin-bottom:8px;color:var(--wv-gray);">Hogares validados</div>
+            <div class="bar-list" id="chartHogares"></div>
+          </div>
+          <div>
+            <div style="font-size:12.5px;font-weight:700;margin-bottom:8px;color:var(--wv-gray);">Niñez validada (0–10)</div>
+            <div class="bar-list" id="chartNinez"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Mapa general de CIS</h2>
+        <p class="section-sub">Cada punto es un CIS georreferenciado, coloreado por municipio. Activa "Medir distancia" y selecciona pares de puntos en el mapa (un CIS o cualquier lugar) para calcular varias rutas por carretera a la vez.</p>
+        <div class="map-wrap" id="mapWrapGeneral">
+          <div class="map-toolbar">
+            <button class="measure-toggle-btn" id="measureToggleGeneral" type="button">📏 Medir distancia por carretera</button>
+            <div class="measure-mode-group" id="measureModeGeneral">
+              <button class="mode-pill active" data-mode="foot" type="button">🚶 A pie</button>
+              <button class="mode-pill" data-mode="motorcycle" type="button">🏍️ Motocicleta</button>
+              <button class="mode-pill" data-mode="driving" type="button">🚗 Vehículo</button>
+            </div>
+            <button class="measure-toggle-btn" id="householdToggleGeneral" type="button">🏠 Household Geo Count</button>
+            <button class="fullscreen-toggle-btn" id="fullscreenToggleGeneral" type="button">⛶ Pantalla completa</button>
+          </div>
+          <div id="mapGeneral"></div>
+          <p class="measure-hint" id="measureHintGeneral"></p>
+          <div class="measure-result" id="measureResultGeneral"></div>
+          <p class="measure-hint" id="householdHintGeneral"></p>
+          <div class="measure-result" id="householdResultGeneral"></div>
+          <p class="map-select-hint" id="mapSelectHintGeneral">🖱️ Clic en un punto para seleccionarlo (filtra la pestaña Detalle) · Ctrl+clic para seleccionar varios · Clic en el mapa para limpiar la selección.</p>
+          <div class="legend" id="legendGeneral"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== TAB DETALLE ===================== -->
+  <section class="tab-panel" id="panel-detalle">
+    <div id="detalleEmpty" class="empty-state">
+      <div class="icon">🔍</div>
+      <h2>Todavía no hay datos cargados</h2>
+      <p>Sube el archivo Excel exportado de KoboToolbox para poder filtrar por municipio, comunidad y CIS.</p>
+    </div>
+
+    <div id="detalleContent" style="display:none;">
+      <div class="section">
+        <div class="filter-bar">
+          <div class="filter-field">
+            <label>Municipio</label>
+            <div class="ms-dropdown" id="msMunicipio">
+              <button type="button" class="ms-trigger" id="msMunicipioTrigger">
+                <span class="ms-trigger-text" id="msMunicipioText">Todos</span>
+                <span class="ms-trigger-arrow">▾</span>
+              </button>
+              <div class="ms-panel">
+                <input type="text" class="ms-search" id="msMunicipioSearch" placeholder="Buscar municipio...">
+                <div class="ms-actions">
+                  <button type="button" class="ms-action-link" data-action="all">Marcar todos</button>
+                  <button type="button" class="ms-action-link" data-action="none">Ninguno</button>
+                </div>
+                <div class="ms-options" id="msMunicipioOptions"></div>
+              </div>
+            </div>
+          </div>
+          <div class="filter-field">
+            <label>Comunidad</label>
+            <div class="ms-dropdown" id="msComunidad">
+              <button type="button" class="ms-trigger" id="msComunidadTrigger">
+                <span class="ms-trigger-text" id="msComunidadText">Todos</span>
+                <span class="ms-trigger-arrow">▾</span>
+              </button>
+              <div class="ms-panel">
+                <input type="text" class="ms-search" id="msComunidadSearch" placeholder="Buscar comunidad...">
+                <div class="ms-actions">
+                  <button type="button" class="ms-action-link" data-action="all">Marcar todos</button>
+                  <button type="button" class="ms-action-link" data-action="none">Ninguno</button>
+                </div>
+                <div class="ms-options" id="msComunidadOptions"></div>
+              </div>
+            </div>
+          </div>
+          <div class="filter-field">
+            <label>CIS</label>
+            <div class="ms-dropdown" id="msCIS">
+              <button type="button" class="ms-trigger" id="msCISTrigger">
+                <span class="ms-trigger-text" id="msCISText">Todos</span>
+                <span class="ms-trigger-arrow">▾</span>
+              </button>
+              <div class="ms-panel">
+                <input type="text" class="ms-search" id="msCISSearch" placeholder="Buscar CIS...">
+                <div class="ms-actions">
+                  <button type="button" class="ms-action-link" data-action="all">Marcar todos</button>
+                  <button type="button" class="ms-action-link" data-action="none">Ninguno</button>
+                </div>
+                <div class="ms-options" id="msCISOptions"></div>
+              </div>
+            </div>
+          </div>
+          <button class="filter-reset" id="filterReset" type="button">Limpiar filtros</button>
+        </div>
+        <p class="result-count" id="resultCount"></p>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-card accent">
+          <div class="label">CIS en selección</div>
+          <div class="value" id="kpiDetalleCIS">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Hogares (validados)</div>
+          <div class="value" id="kpiDetalleHogares">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Niñez 0–10 (validada)</div>
+          <div class="value" id="kpiDetalleNinez">0</div>
+          <div class="sub" id="kpiDetalleNinezSub">0 niños · 0 niñas</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Mapa de la selección</h2>
+        <p class="section-sub">Activa "Medir distancia" y selecciona pares de puntos en el mapa (un CIS o cualquier lugar) para calcular varias rutas por carretera a la vez.</p>
+        <div class="map-wrap" id="mapWrapDetail">
+          <div class="map-toolbar">
+            <button class="measure-toggle-btn" id="measureToggleDetail" type="button">📏 Medir distancia por carretera</button>
+            <div class="measure-mode-group" id="measureModeDetail">
+              <button class="mode-pill active" data-mode="foot" type="button">🚶 A pie</button>
+              <button class="mode-pill" data-mode="motorcycle" type="button">🏍️ Motocicleta</button>
+              <button class="mode-pill" data-mode="driving" type="button">🚗 Vehículo</button>
+            </div>
+            <button class="measure-toggle-btn" id="householdToggleDetail" type="button">🏠 Household Geo Count</button>
+            <button class="fullscreen-toggle-btn" id="fullscreenToggleDetail" type="button">⛶ Pantalla completa</button>
+          </div>
+          <div id="mapDetail"></div>
+          <p class="measure-hint" id="measureHintDetail"></p>
+          <div class="measure-result" id="measureResultDetail"></div>
+          <p class="measure-hint" id="householdHintDetail"></p>
+          <div class="measure-result" id="householdResultDetail"></div>
+          <p class="map-select-hint" id="mapSelectHintDetail">🖱️ Clic en un punto para seleccionarlo · Ctrl+clic para seleccionar varios · Clic en el mapa para limpiar la selección.</p>
+          <div class="legend" id="legendDetail"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Detalle por CIS</h2>
+        <p class="section-sub">Información completa de cada CIS que cumple con el filtro aplicado</p>
+        <div class="cis-grid" id="cisCardsContainer"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>Dashboard de factibilidad operativa FRS · Datos provenientes de KoboToolbox</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------------------------------------------------------------
+  // Utilidades
+  // ---------------------------------------------------------------
+  function normalize(str){
+    if(str === undefined || str === null) return "";
+    return String(str)
+      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .toLowerCase().trim();
+  }
+
+  function toNum(v){
+    if(v === undefined || v === null || v === "") return 0;
+    var n = parseFloat(String(v).replace(",","."));
+    return isNaN(n) ? 0 : n;
+  }
+
+  function toNumOrNaN(v){
+    if(v === undefined || v === null || v === "") return NaN;
+    var n = parseFloat(String(v).replace(",","."));
+    return n;
+  }
+
+  function isChecked(v){
+    if(v === undefined || v === null) return false;
+    var s = String(v).trim();
+    return s !== "" && s !== "0" && s.toLowerCase() !== "false" && s.toLowerCase() !== "n/a";
+  }
+
+  // Encuentra el header (clave real de columna) que contenga TODAS las
+  // palabras clave de "includes" y NINGUNA de "excludes", sobre texto normalizado.
+  // Cuando hay varias coincidencias, se prefiere el header MÁS CORTO: las preguntas
+  // reales suelen ser más concisas que las notas/instrucciones descriptivas del
+  // formulario, que a veces también contienen las mismas palabras clave.
+  function findColumn(headers, includes, excludes){
+    excludes = excludes || [];
+    var candidates = headers.filter(function(h){
+      var nh = normalize(h);
+      var okInclude = includes.every(function(k){ return nh.indexOf(normalize(k)) !== -1; });
+      if(!okInclude) return false;
+      return excludes.every(function(k){ return nh.indexOf(normalize(k)) === -1; });
+    });
+    if(candidates.length === 0) return null;
+    candidates.sort(function(a,b){ return a.length - b.length; });
+    return candidates[0];
+  }
+
+  function findColumns(headers, includes, excludes){
+    excludes = excludes || [];
+    return headers.filter(function(h){
+      var nh = normalize(h);
+      var okInclude = includes.every(function(k){ return nh.indexOf(normalize(k)) !== -1; });
+      if(!okInclude) return false;
+      return excludes.every(function(k){ return nh.indexOf(normalize(k)) === -1; });
+    });
+  }
+
+  var MUNICIPIO_PALETTE = ["#F2591C","#1B7A72","#2C4A6E","#8E44AD","#C77700","#146C43","#7A4A2C"];
+  var municipioColorMap = {};
+  function colorForMunicipio(m){
+    if(!municipioColorMap[m]){
+      var idx = Object.keys(municipioColorMap).length % MUNICIPIO_PALETTE.length;
+      municipioColorMap[m] = MUNICIPIO_PALETTE[idx];
+    }
+    return municipioColorMap[m];
+  }
+
+  function factibilidadInfo(raw){
+    var n = normalize(raw);
+    if(n.indexOf("no viable") !== -1) return {cls:"no-viable", label: raw || "No viable"};
+    if(n.indexOf("condicion") !== -1) return {cls:"condiciones", label: raw || "Viable con condiciones"};
+    if(n.indexOf("viable") !== -1) return {cls:"viable", label: raw || "Viable"};
+    return {cls:"neutro", label: raw || "Sin valorar"};
+  }
+
+  function escapeHtml(s){
+    return String(s === undefined || s === null ? "" : s)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  // ---------------------------------------------------------------
+  // Estado global
+  // ---------------------------------------------------------------
+  var state = {
+    records: [],       // registros normalizados por CIS
+    loaded: false
+  };
+
+  var filters = { municipio:[], comunidad:[], cis:[] }; // arreglo vacío = "Todos"
+
+  var mapGeneral = null, mapDetail = null;
+  var markersGeneral = [], markersDetail = [];
+  var measureGeneral = null, measureDetail = null;
+  var hgcGeneral = null, hgcDetail = null;
+
+  // ---------------------------------------------------------------
+  // Parseo del Excel
+  // ---------------------------------------------------------------
+  function parseWorkbook(workbook){
+    var sheetNames = workbook.SheetNames;
+    if(!sheetNames || sheetNames.length === 0){
+      throw new Error("El archivo no contiene hojas.");
+    }
+
+    // Hoja principal: la primera hoja que NO sea el repeat de estructuras
+    var repeatSheetName = sheetNames.find(function(n){ return normalize(n).indexOf("rpt_estructuras") !== -1; });
+    var mainSheetName = sheetNames.find(function(n){ return n !== repeatSheetName; }) || sheetNames[0];
+
+    var mainRows = XLSX.utils.sheet_to_json(workbook.Sheets[mainSheetName], {defval:""});
+    var repeatRows = repeatSheetName ? XLSX.utils.sheet_to_json(workbook.Sheets[repeatSheetName], {defval:""}) : [];
+
+    if(mainRows.length === 0){
+      throw new Error("La hoja principal no tiene registros.");
+    }
+
+    var headers = Object.keys(mainRows[0]);
+    var repeatHeaders = repeatRows.length ? Object.keys(repeatRows[0]) : [];
+
+    // ---- Localizar columnas de la hoja principal ----
+    var col = {
+      uuid: findColumn(headers, ["_uuid"]) || findColumn(headers, ["uuid"], ["submission"]),
+      municipio: findColumn(headers, ["municipio"]),
+      comunidadSel: findColumn(headers, ["comunidad"], ["escriba", "otra", "formulario", "evalua"]),
+      comunidadOtra: findColumn(headers, ["escriba el nombre de la comunidad"]),
+      nombreCis: findColumn(headers, ["nombre o referencia del cis"]) || findColumn(headers, ["referencia del cis"]),
+      lat: findColumn(headers, ["latitude"]),
+      lon: findColumn(headers, ["longitude"]),
+      tipoEspacio: findColumn(headers, ["tipo de espacio identificado"]) || findColumn(headers, ["tipo de espacio"]),
+      condicion: findColumn(headers, ["condicion general del espacio"]),
+      disponibilidad: findColumn(headers, ["disponible actualmente"]),
+      riesgosBase: findColumn(headers, ["riesgos de seguridad"], ["/"]),
+      hogaresEstimado: findColumn(headers, ["hogares habitados hay"]) || findColumn(headers, ["hogares", "30 minutos"], ["confirmaron"]),
+      hogaresValidado: findColumn(headers, ["hogares", "confirmaron"]),
+      ninosEstimado: findColumn(headers, ["ninos", "varones"], ["confirmados"]),
+      ninasEstimado: findColumn(headers, ["ninas", "mujeres"], ["confirmadas"]),
+      ninosValidado: findColumn(headers, ["ninos", "varones", "confirmados"]),
+      ninasValidado: findColumn(headers, ["ninas", "mujeres", "confirmadas"]),
+      hayVoluntarios: findColumn(headers, ["personas voluntarias vinculadas"]),
+      factibilidad: findColumn(headers, ["factibles para la implementacion"]) || findColumn(headers, ["factibilidad"]),
+      justificacion: findColumn(headers, ["justifique la valoracion"]),
+      recomendaciones: findColumn(headers, ["recomendaciones"])
+    };
+
+    if(!col.municipio || !col.nombreCis){
+      throw new Error("No se pudieron identificar las columnas básicas (Municipio / Nombre del CIS). Verifica que el archivo sea la exportación correcta de Kobo.");
+    }
+
+    var riesgosCols = col.riesgosBase ? findColumns(headers, [normalize(col.riesgosBase)], []).filter(function(h){ return h.indexOf("/") !== -1; }) : [];
+
+    // ---- Localizar columnas de la hoja de repetición ----
+    var rcol = {
+      submissionUuid: findColumn(repeatHeaders, ["_submission__uuid"]) || findColumn(repeatHeaders, ["submission", "uuid"]),
+      tipo: findColumn(repeatHeaders, ["tipo de estructura comunitaria"]),
+      nombreGrupo: findColumn(repeatHeaders, ["nombre del grupo"]),
+      numVoluntarios: findColumn(repeatHeaders, ["numero aproximado de voluntarios"]) || findColumn(repeatHeaders, ["voluntarios activos"]),
+      disposicion: findColumn(repeatHeaders, ["disposicion de esta estructura"]) || findColumn(repeatHeaders, ["disposicion"], ["justifique"])
+    };
+
+    // ---- Agrupar estructuras por uuid de submission ----
+    var estructurasPorUuid = {};
+    if(rcol.submissionUuid){
+      repeatRows.forEach(function(r){
+        var key = r[rcol.submissionUuid];
+        if(!key) return;
+        if(!estructurasPorUuid[key]) estructurasPorUuid[key] = [];
+        estructurasPorUuid[key].push({
+          tipo: rcol.tipo ? r[rcol.tipo] : "",
+          nombreGrupo: rcol.nombreGrupo ? r[rcol.nombreGrupo] : "",
+          numVoluntarios: rcol.numVoluntarios ? toNum(r[rcol.numVoluntarios]) : null,
+          disposicion: rcol.disposicion ? r[rcol.disposicion] : ""
+        });
+      });
+    }
+
+    // ---- Construir registros normalizados ----
+    var records = mainRows.map(function(row, idx){
+      var uuid = col.uuid ? row[col.uuid] : ("row-" + idx);
+
+      var comunidadSelVal = col.comunidadSel ? row[col.comunidadSel] : "";
+      var comunidadOtraVal = col.comunidadOtra ? row[col.comunidadOtra] : "";
+      var esOtra = normalize(comunidadSelVal).indexOf("otra") !== -1;
+      var comunidad = (esOtra && comunidadOtraVal) ? comunidadOtraVal : (comunidadSelVal || "Sin especificar");
+
+      var riesgos = riesgosCols.map(function(h){
+        if(isChecked(row[h])){
+          var prefix = col.riesgosBase + "/";
+          return (h.indexOf(prefix) === 0) ? h.slice(prefix.length).trim() : h.split("/").pop().trim();
+        }
+        return null;
+      }).filter(Boolean);
+
+      var hogaresEst = col.hogaresEstimado ? toNum(row[col.hogaresEstimado]) : 0;
+      var hogaresVal = col.hogaresValidado ? toNum(row[col.hogaresValidado]) : 0;
+      var ninosEst = col.ninosEstimado ? toNum(row[col.ninosEstimado]) : 0;
+      var ninasEst = col.ninasEstimado ? toNum(row[col.ninasEstimado]) : 0;
+      var ninosVal = col.ninosValidado ? toNum(row[col.ninosValidado]) : 0;
+      var ninasVal = col.ninasValidado ? toNum(row[col.ninasValidado]) : 0;
+
+      var lat = col.lat ? toNumOrNaN(row[col.lat]) : NaN;
+      var lon = col.lon ? toNumOrNaN(row[col.lon]) : NaN;
+
+      return {
+        uuid: uuid,
+        municipio: (col.municipio ? row[col.municipio] : "") || "Sin especificar",
+        comunidad: comunidad,
+        nombreCis: (col.nombreCis ? row[col.nombreCis] : "") || "CIS sin nombre",
+        lat: lat, lon: lon,
+        tipoEspacio: col.tipoEspacio ? row[col.tipoEspacio] : "",
+        condicion: col.condicion ? row[col.condicion] : "",
+        disponibilidad: col.disponibilidad ? row[col.disponibilidad] : "",
+        riesgos: riesgos,
+        hogaresEstimado: hogaresEst,
+        hogaresValidado: hogaresVal,
+        hogaresDiferencia: hogaresVal - hogaresEst,
+        ninosEstimado: ninosEst,
+        ninasEstimado: ninasEst,
+        ninezEstimadaTotal: ninosEst + ninasEst,
+        ninosValidado: ninosVal,
+        ninasValidado: ninasVal,
+        ninezValidadaTotal: ninosVal + ninasVal,
+        ninezDiferencia: (ninosVal + ninasVal) - (ninosEst + ninasEst),
+        hayVoluntarios: col.hayVoluntarios ? row[col.hayVoluntarios] : "",
+        factibilidad: col.factibilidad ? row[col.factibilidad] : "",
+        justificacion: col.justificacion ? row[col.justificacion] : "",
+        recomendaciones: col.recomendaciones ? row[col.recomendaciones] : "",
+        estructuras: estructurasPorUuid[uuid] || []
+      };
+    });
+
+    return records;
+  }
+
+  // ---------------------------------------------------------------
+  // Decodificación de submissions de Kobo (usado por la conexión vía GitHub)
+  // ---------------------------------------------------------------
+  // Diccionarios para traducir los códigos internos (nombres XML) que devuelve la
+  // API a las etiquetas legibles en español que se definieron en el formulario.
+  var LBL_MUNICIPIO = {taulabe:"Taulabé", sanjose:"San José de Comayagua", meambar:"Meámbar"};
+  var LBL_COMUNIDAD = {"meambar_meambar_centro":"Meámbar centro","meambar_san_jose_de_los_planes":"San José de los Planes","meambar_santa_ana":"Santa Ana","meambar_el_palmital":"El Palmital","meambar_monte_de_dios":"Monte de Dios","meambar_el_buen_pastor":"El Buen Pastor","meambar_san_antonio_de_buenos_aires":"San Antonio de Buenos Aires","meambar_la_pimienta":"La Pimienta","meambar_santa_elena":"Santa Elena","meambar_pueblo_nuevo":"Pueblo Nuevo","meambar_la_concepcion":"La Concepción","meambar_la_joya":"La Joya","meambar_los_globos":"Los Globos","meambar_jicarito":"Jicarito","meambar_el_cienegal":"El Cienegal","meambar_san_isidro":"San Isidro","meambar_canchias":"Canchías","meambar_la_mesa":"La Mesa","meambar_san_benito":"San Benito","meambar_las_lajas":"Las Lajas","meambar_las_tranquitas":"Las Tranquitas","meambar_corinto":"Corinto","meambar_mesetilla":"Mesetilla","meambar_potrerillos":"Potrerillos","meambar_el_zapote":"El Zapote","meambar_el_aguaje":"El Aguaje","meambar_el_campo":"El Campo","meambar_el_ojo_de_agua":"El Ojo de Agua","meambar_mata_palo":"Mata Palo","meambar_montanuela":"Montañuela","meambar_nueva_suyapa":"Nueva Suyapa","meambar_las_mestizas":"Las Mestizas","meambar_chichipate":"Chichipate","meambar_los_dolores":"Los Dolores","meambar_maragua_arriba":"Maragua Arriba","meambar_el_litoro":"El Litoro","meambar_el_rosario":"El Rosario","meambar_el_junco":"El Junco","meambar_loma_alta":"Loma Alta","meambar_el_chaparral":"El Chaparral","meambar_el_cedral":"El Cedral","meambar_agua_fria":"Agua Fría","sanjose_el_barquito":"El Barquito","sanjose_el_zapote":"El Zapote","sanjose_la_puerta_del_potrero":"La Puerta del Potrero","sanjose_las_manzanas":"Las Manzanas","sanjose_la_pimienta":"La Pimienta","sanjose_liquidambos":"Liquidambos","sanjose_los_anises":"Los Anises","sanjose_zompoperos":"Zompoperos","sanjose_barrio_abajo_sjc":"Barrio Abajo SJC","sanjose_barrio_arriba_sjc":"Barrio Arriba SJC","sanjose_el_centro_sjc":"El Centro SJC","sanjose_las_flores":"Las Flores","sanjose_monte_fresco":"Monte Fresco","sanjose_vista_hermosa":"Vista Hermosa","sanjose_la_enramada":"La Enramada","sanjose_las_palmas":"Las Palmas","sanjose_los_llanos_de_san_jose":"Los Llanos de San José","sanjose_buenos_aires":"Buenos Aires","sanjose_el_centro_delicias":"El Centro- Delicias","sanjose_el_zarzal":"El Zarzal","sanjose_flor_del_campo":"Flor del Campo","sanjose_la_sierra":"La Sierra","sanjose_la_tejera":"La Tejera","sanjose_los_pinos":"Los Pinos","sanjose_san_antonio":"San Antonio","sanjose_el_porvenir":"El Porvenir","sanjose_nueva_esperanza":"Nueva Esperanza","sanjose_el_calichito":"El Calichito","sanjose_el_carmen":"El Carmen","sanjose_chaparral_arriba":"Chaparral Arriba","sanjose_los_gonzalez":"Los González","sanjose_buena_vista":"Buena Vista","sanjose_higuerones":"Higuerones","sanjose_huerto_del_eden":"Huerto del Edén","sanjose_el_diviso":"El Diviso","sanjose_la_pita":"La Pita","sanjose_laguna_seca":"Laguna Seca","taulabe_taulabe_centro":"Taulabé centro","taulabe_el_carrizal":"El Carrizal","taulabe_jardines":"Jardines","taulabe_bacadia":"Bacadía","taulabe_jaitique":"Jaitique","taulabe_el_palmichal":"El Palmichal","taulabe_ocoman":"Ocomán","taulabe_varsovia":"Varsovia ","taulabe_la_mision":"La Misión","taulabe_lajas":"Lajas","taulabe_cerro_azul":"Cerro Azul","taulabe_la_union_de_san_antonio_de_yure":"La Unión de San Antonio de Yuré ","taulabe_buenos_aires":"Buenos Aires","taulabe_el_cerron":"El Cerrón","taulabe_terrero_blanco":"Terrero Blanco","taulabe_camalotales":"Camalotales","taulabe_montanuela":"Montañuela","taulabe_las_alejandras":"Las Alejandras","taulabe_quebraditas":"Quebraditas","taulabe_los_llanos":"Los Llanos","taulabe_buena_vista_de_varsovia":"Buena Vista de Varsovia","taulabe_la_laguna":"La Laguna","taulabe_el_chaparral":"El Chaparral","taulabe_chaguites":"Chagüites","taulabe_la_angostura":"La Angostura","taulabe_cantillanos":"Cantillanos","taulabe_rancho_alegre":"Rancho Alegre","taulabe_brisas_de_bacadia":"Brisas de Bacadía","taulabe_bella_vista":"Bella Vista","taulabe_la_providencia":"La Providencia","taulabe_el_penon":"El Peñón ","taulabe_sabana_de_ocote":"Sabana de Ocote ","taulabe_el_playon":"El Playón","taulabe_macusales":"Macusales ","taulabe_las_flores_de_jaitique":"Las Flores de Jaitique","taulabe_pito_solo":"Pito Solo","taulabe_quebraditas_de_yure":"Quebraditas de Yuré","taulabe_san_antonio_de_yure":"San Antonio de Yuré","taulabe_palmichal_carmen":"Palmichal Carmen","taulabe_san_antonio_bacadia":"San Antonio Bacadía","taulabe_piedra_de_afilar":"Piedra de Afilar","taulabe_villa_napoles":"Villa Nápoles","taulabe_piedra_pintada":"Piedra Pintada","taulabe_ojo_de_agua":"Ojo de Agua","taulabe_san_francisco":"San Francisco","taulabe_el_cedral":"El Cedral","taulabe_la_vega_de_jaitique":"La Vega de Jaitique","taulabe_huerto_del_eden":"Huerto del Edén","taulabe_la_union":"La Unión"};
+  var LBL_TIPO_CIS = {iglesia:"Iglesia", escuela:"Escuela", salon_comunal:"Salón comunal / municipal",
+    casa_comunal:"Casa comunal", centro_salud:"Centro de salud", cancha:"Cancha / campo deportivo", otro:"Otro"};
+  var LBL_CONDICION = {bueno:"Bueno", regular:"Regular", malo:"Malo"};
+  var LBL_DISPONIBILIDAD = {si:"Sí, disponible", parcial:"Parcialmente disponible", no:"No disponible"};
+  var LBL_RIESGOS = {ninguno:"Ninguno identificado", agua:"Falta de agua",
+    saneamiento:"Falta de saneamiento/letrinas", seguridad:"Riesgo de seguridad/salvaguarda",
+    acceso:"Difícil acceso", otro:"Otro"};
+  var LBL_SI_NO = {si:"Sí", no:"No"};
+  var LBL_TIPO_ESTRUCTURA = {iglesia:"Iglesia", escuela:"Escuela", patronato:"Patronato",
+    red_mujeres:"Red de mujeres", junta_agua:"Junta de agua", ong_local:"ONG u organización local", otro:"Otro"};
+  var LBL_DISPOSICION = {alta:"Alta", media:"Media", baja:"Baja", no_dispuesto:"No dispuesto"};
+  var LBL_FACTIBILIDAD = {viable:"Viable", viable_condiciones:"Viable con condiciones/mitigación", no_viable:"No viable"};
+
+  function lookupLabel(dict, code){
+    if(code === undefined || code === null || code === "") return "";
+    return dict[code] || code; // si no se reconoce el código, se muestra tal cual (robustez ante cambios futuros)
+  }
+
+  // Busca en un objeto de submission un campo por su nombre, sin importar si está
+  // dentro de uno o más grupos (Kobo antepone el/los grupo(s) separados por "/").
+  function findApiField(obj, name){
+    if(Object.prototype.hasOwnProperty.call(obj, name)) return name;
+    var keys = Object.keys(obj);
+    var suffix = "/" + name;
+    for(var i=0;i<keys.length;i++){
+      if(keys[i] === name || (keys[i].length > suffix.length && keys[i].slice(-suffix.length) === suffix)){
+        return keys[i];
+      }
+    }
+    return null;
+  }
+
+  function apiVal(obj, name){
+    var key = findApiField(obj, name);
+    return key ? obj[key] : "";
+  }
+
+  // Convierte el arreglo de submissions crudo de la API v2 de Kobo al mismo formato
+  // de "records" que usa el resto del dashboard (igual que parseWorkbook con Excel).
+  function parseApiSubmissions(submissions){
+    return submissions.map(function(sub, idx){
+      var uuid = apiVal(sub, "_uuid") || sub["_id"] || ("api-row-" + idx);
+
+      var municipioCode = apiVal(sub, "municipio");
+      var comunidadCode = apiVal(sub, "comunidad");
+      var comunidadOtra = apiVal(sub, "comunidad_otra");
+      var esOtra = normalize(comunidadCode).indexOf("otro") !== -1;
+      var comunidad = (esOtra && comunidadOtra) ? comunidadOtra : lookupLabel(LBL_COMUNIDAD, comunidadCode);
+
+      var geopointRaw = apiVal(sub, "gps_cis"); // formato: "lat lon altitud precision"
+      var lat = NaN, lon = NaN;
+      if(geopointRaw){
+        var parts = String(geopointRaw).trim().split(/\s+/);
+        lat = toNumOrNaN(parts[0]);
+        lon = toNumOrNaN(parts[1]);
+      }
+
+      var riesgosRaw = apiVal(sub, "riesgos_cis"); // select_multiple: nombres separados por espacio
+      var riesgos = riesgosRaw ? String(riesgosRaw).trim().split(/\s+/).map(function(code){
+        return lookupLabel(LBL_RIESGOS, code);
+      }) : [];
+
+      var hogaresEst = toNum(apiVal(sub, "hogares_estimacion_inicial"));
+      var hogaresVal = toNum(apiVal(sub, "hogares_validado"));
+      var ninosEst = toNum(apiVal(sub, "ninos_estimacion_inicial"));
+      var ninasEst = toNum(apiVal(sub, "ninas_estimacion_inicial"));
+      var ninosVal = toNum(apiVal(sub, "ninos_validado"));
+      var ninasVal = toNum(apiVal(sub, "ninas_validado"));
+
+      // Estructuras de voluntariado (repeat group)
+      var repeatKey = findApiField(sub, "rpt_estructuras");
+      var repeatArr = (repeatKey && Array.isArray(sub[repeatKey])) ? sub[repeatKey] : [];
+      var estructuras = repeatArr.map(function(item){
+        return {
+          tipo: lookupLabel(LBL_TIPO_ESTRUCTURA, apiVal(item, "tipo_estructura")),
+          nombreGrupo: apiVal(item, "nombre_grupo"),
+          numVoluntarios: (function(){ var v = apiVal(item, "numero_voluntarios"); return v === "" ? null : toNum(v); })(),
+          disposicion: lookupLabel(LBL_DISPOSICION, apiVal(item, "disposicion_participar"))
+        };
+      });
+
+      return {
+        uuid: uuid,
+        municipio: lookupLabel(LBL_MUNICIPIO, municipioCode) || "Sin especificar",
+        comunidad: comunidad || "Sin especificar",
+        nombreCis: apiVal(sub, "nombre_cis") || "CIS sin nombre",
+        lat: lat, lon: lon,
+        tipoEspacio: lookupLabel(LBL_TIPO_CIS, apiVal(sub, "tipo_cis")),
+        condicion: lookupLabel(LBL_CONDICION, apiVal(sub, "condicion_cis")),
+        disponibilidad: lookupLabel(LBL_DISPONIBILIDAD, apiVal(sub, "disponibilidad_cis")),
+        riesgos: riesgos,
+        hogaresEstimado: hogaresEst,
+        hogaresValidado: hogaresVal,
+        hogaresDiferencia: hogaresVal - hogaresEst,
+        ninosEstimado: ninosEst,
+        ninasEstimado: ninasEst,
+        ninezEstimadaTotal: ninosEst + ninasEst,
+        ninosValidado: ninosVal,
+        ninasValidado: ninasVal,
+        ninezValidadaTotal: ninosVal + ninasVal,
+        ninezDiferencia: (ninosVal + ninasVal) - (ninosEst + ninasEst),
+        hayVoluntarios: lookupLabel(LBL_SI_NO, apiVal(sub, "hay_voluntarios")),
+        factibilidad: lookupLabel(LBL_FACTIBILIDAD, apiVal(sub, "factibilidad_general")),
+        justificacion: apiVal(sub, "justificacion_factibilidad"),
+        recomendaciones: apiVal(sub, "recomendaciones"),
+        estructuras: estructuras
+      };
+    });
+  }
+
+  // Trae TODAS las submissions siguiendo la paginación de la API v2 de Kobo.
+  // ---------------------------------------------------------------
+  // Carga de archivo
+  // ---------------------------------------------------------------
+  var uploadTrigger = document.getElementById("uploadTrigger");
+  var fileInput = document.getElementById("fileInput");
+  var loadStatus = document.getElementById("loadStatus");
+  var errorBanner = document.getElementById("errorBanner");
+  var refreshBtn = document.getElementById("refreshBtn");
+  var configZipInput = document.getElementById("configZipInput");
+  var configZipPassword = document.getElementById("configZipPassword");
+  var configZipBtn = document.getElementById("configZipBtn");
+  var configZipErrorBanner = document.getElementById("configZipErrorBanner");
+  var GH_DATA_PATH = "data/kobo_data.json";
+
+  var lastSource = null; // "excel" | "github"
+  var lastGithubConfig = null; // {owner, repo, token} en memoria, nunca se persiste
+
+  function applyLoadedRecords(records, statusHtml){
+    state.records = records;
+    state.loaded = true;
+    municipioColorMap = {}; // reset paleta de colores
+    loadStatus.innerHTML = statusHtml;
+    refreshBtn.style.display = "inline-flex";
+    resetFilters();
+    activateTab("general"); // primero visible, así el mapa Leaflet se inicializa con tamaño correcto
+    renderAll();
+  }
+
+  function nowStamp(){
+    var now = new Date();
+    return now.toLocaleDateString("es-HN") + " " + now.toLocaleTimeString("es-HN", {hour:"2-digit", minute:"2-digit"});
+  }
+
+  uploadTrigger.addEventListener("click", function(){ fileInput.click(); });
+
+  fileInput.addEventListener("change", function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    showError(null);
+    loadStatus.innerHTML = "Leyendo <strong>" + escapeHtml(file.name) + "</strong>...";
+
+    var reader = new FileReader();
+    reader.onload = function(evt){
+      try{
+        var data = new Uint8Array(evt.target.result);
+        var workbook = XLSX.read(data, {type:"array"});
+        var records = parseWorkbook(workbook);
+        lastSource = "excel";
+        applyLoadedRecords(records, "<strong>" + escapeHtml(file.name) + "</strong><br>" + records.length + " CIS cargados · " + nowStamp());
+      }catch(err){
+        console.error(err);
+        showError("No se pudo leer el archivo: " + err.message + " Verifica que sea la exportación de Kobo en formato de etiquetas (.xlsx).");
+        loadStatus.textContent = "Error al cargar el archivo.";
+      }
+    };
+    reader.onerror = function(){
+      showError("Ocurrió un error al leer el archivo. Intenta nuevamente.");
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
+  // Decodifica un string base64 (como el que devuelve la Contents API de GitHub)
+  // respetando caracteres UTF-8 (tildes, ñ, etc.), que atob() por sí solo corrompe.
+  function b64DecodeUnicode(str){
+    var binary = atob(str.replace(/\n/g, ""));
+    var bytes = new Uint8Array(binary.length);
+    for(var i=0;i<binary.length;i++){ bytes[i] = binary.charCodeAt(i); }
+    return new TextDecoder("utf-8").decode(bytes);
+  }
+
+  // owner/repo/token llegan como parámetros (desde el ZIP desencriptado o desde "Actualizar"),
+  // ya no se leen de campos manuales en el formulario.
+  function connectToGithub(owner, repo, token){
+    if(!owner || !repo || !token){
+      showConfigZipError("La configuración no incluye usuario, repositorio y token de GitHub válidos.");
+      return Promise.resolve();
+    }
+    showConfigZipError(null);
+    loadStatus.innerHTML = "Conectando con GitHub...";
+
+    var url = "https://api.github.com/repos/" + owner + "/" + repo + "/contents/" + GH_DATA_PATH;
+    return fetch(url, {
+      headers: { "Authorization": "token " + token, "Accept": "application/vnd.github+json" }
+    }).then(function(resp){
+      if(!resp.ok){
+        if(resp.status === 401 || resp.status === 403){
+          throw new Error("Token de GitHub inválido o sin permiso de lectura sobre ese repositorio (HTTP " + resp.status + ").");
+        }
+        if(resp.status === 404){
+          throw new Error("No se encontró el archivo '" + GH_DATA_PATH + "' en ese repositorio. Verifica que el proceso automático ya haya corrido al menos una vez.");
+        }
+        throw new Error("El servidor de GitHub respondió con un error (HTTP " + resp.status + ").");
+      }
+      return resp.json();
+    }).then(function(data){
+      var jsonText = b64DecodeUnicode(data.content);
+      var submissions = JSON.parse(jsonText);
+      var records = parseApiSubmissions(submissions);
+      lastSource = "github";
+      lastGithubConfig = {owner:owner, repo:repo, token:token};
+      applyLoadedRecords(records, "<strong>GitHub (" + escapeHtml(owner) + "/" + escapeHtml(repo) + ")</strong><br>" + records.length + " CIS cargados · " + nowStamp());
+    }).catch(function(err){
+      console.error(err);
+      showConfigZipError(err.message || "No se pudo conectar con GitHub. Verifica la configuración e intenta nuevamente.");
+      loadStatus.textContent = state.loaded ? loadStatus.textContent : "Ningún dato cargado todavía.";
+    });
+  }
+
+  function showConfigZipError(msg){
+    if(!msg){ configZipErrorBanner.classList.remove("show"); configZipErrorBanner.textContent=""; return; }
+    configZipErrorBanner.textContent = msg;
+    configZipErrorBanner.classList.add("show");
+  }
+
+  function loadConfigFromZip(){
+    var file = configZipInput.files[0];
+    var password = configZipPassword.value;
+    if(!file){
+      showConfigZipError("Selecciona primero el archivo .zip de configuración.");
+      return;
+    }
+    if(!password){
+      showConfigZipError("Escribe la contraseña del ZIP.");
+      return;
+    }
+    showConfigZipError(null);
+    configZipBtn.disabled = true;
+    configZipBtn.textContent = "Leyendo ZIP...";
+    loadStatus.innerHTML = "Leyendo configuración encriptada...";
+
+    Promise.resolve().then(function(){
+      if(typeof zip === "undefined" || !zip.ZipReader){
+        throw new Error("No se pudo cargar la librería para leer el ZIP (zip.js). Verifica tu conexión a internet o que no esté bloqueada por un firewall/extensión, y recarga la página.");
+      }
+      var reader = new zip.ZipReader(new zip.BlobReader(file), { password: password });
+      return reader.getEntries().then(function(entries){
+        var entry = entries.find(function(e){ return e.filename === "config.json"; });
+        if(!entry){
+          throw new Error("El ZIP no contiene un archivo 'config.json'.");
+        }
+        return entry.getData(new zip.TextWriter());
+      }).finally(function(){
+        reader.close();
+      });
+    }).then(function(text){
+      var config;
+      try{
+        config = JSON.parse(text);
+      }catch(e){
+        throw new Error("El archivo config.json dentro del ZIP no es un JSON válido.");
+      }
+      if(!config.github_user || !config.github_repo || !config.github_token){
+        throw new Error("config.json debe incluir github_user, github_repo y github_token.");
+      }
+      configZipBtn.textContent = "Conectando con GitHub...";
+      return connectToGithub(config.github_user, config.github_repo, config.github_token);
+    }).catch(function(err){
+      console.error(err);
+      var msg = (err && err.message === "Invalid password")
+        ? "Contraseña incorrecta para este ZIP."
+        : (err && err.message) || "No se pudo leer el archivo ZIP.";
+      showConfigZipError(msg);
+      loadStatus.textContent = state.loaded ? loadStatus.textContent : "Ningún dato cargado todavía.";
+    }).finally(function(){
+      configZipBtn.disabled = false;
+      configZipBtn.textContent = "Cargar y conectar";
+    });
+  }
+
+  configZipBtn.addEventListener("click", loadConfigFromZip);
+  configZipPassword.addEventListener("keydown", function(e){
+    if(e.key === "Enter") loadConfigFromZip();
+  });
+
+  refreshBtn.addEventListener("click", function(){
+    if(lastSource === "github" && lastGithubConfig){
+      connectToGithub(lastGithubConfig.owner, lastGithubConfig.repo, lastGithubConfig.token);
+    } else if(lastSource === "excel"){
+      fileInput.click();
+    } else {
+      showError("Primero conéctate a una fuente de datos o sube un archivo Excel.");
+    }
+  });
+
+  function showError(msg){
+    if(!msg){ errorBanner.classList.remove("show"); errorBanner.textContent=""; return; }
+    errorBanner.textContent = msg;
+    errorBanner.classList.add("show");
+  }
+
+  // ---------------------------------------------------------------
+  // Tabs
+  // ---------------------------------------------------------------
+  var tabButtons = document.querySelectorAll(".tab-btn");
+
+  function activateTab(tabName){
+    tabButtons.forEach(function(b){ b.classList.toggle("active", b.dataset.tab === tabName); });
+    document.querySelectorAll(".tab-panel").forEach(function(p){ p.classList.remove("active"); });
+    var panel = document.getElementById("panel-" + tabName);
+    if(panel) panel.classList.add("active");
+    // Leaflet necesita recalcular tamaño cuando el contenedor pasa de oculto a visible.
+    // Para el mapa de Detalle esto no basta: como se crea la primera vez mientras esa
+    // pestaña sigue oculta (justo después de cargar los datos, con "General" activa),
+    // sus marcadores quedan con geometría colapsada (0x0) hasta que se vuelven a dibujar
+    // con el contenedor ya visible — por eso se re-renderiza por completo, no solo invalidateSize.
+    setTimeout(function(){
+      if(tabName === "general" && mapGeneral) mapGeneral.invalidateSize();
+      if(tabName === "detalle" && state.loaded){
+        if(mapDetail) mapDetail.invalidateSize();
+        renderMapDetail(getMunicipioComunidadFiltered());
+        refreshSelectionStyles();
+      }
+    }, 50);
+  }
+
+  tabButtons.forEach(function(btn){
+    btn.addEventListener("click", function(){ activateTab(btn.dataset.tab); });
+  });
+
+  // ---------------------------------------------------------------
+  // Pantalla completa de los mapas (General y Detalle)
+  // ---------------------------------------------------------------
+  var mapFullscreenConfigs = [
+    { wrapId:"mapWrapGeneral", btnId:"fullscreenToggleGeneral", getMap:function(){ return mapGeneral; } },
+    { wrapId:"mapWrapDetail",  btnId:"fullscreenToggleDetail",  getMap:function(){ return mapDetail; } }
+  ];
+
+  function setMapFullscreen(cfg, wrap, btn, on){
+    wrap.classList.toggle("fullscreen", on);
+    btn.textContent = on ? "✕ Salir de pantalla completa" : "⛶ Pantalla completa";
+    document.body.classList.toggle("map-fullscreen-lock", on);
+    // Leaflet necesita recalcular tamaño cuando el contenedor cambia de tamaño
+    setTimeout(function(){
+      var map = cfg.getMap();
+      if(map) map.invalidateSize();
+    }, 60);
+  }
+
+  mapFullscreenConfigs.forEach(function(cfg){
+    var wrap = document.getElementById(cfg.wrapId);
+    var btn = document.getElementById(cfg.btnId);
+    if(!wrap || !btn) return;
+    btn.addEventListener("click", function(){
+      setMapFullscreen(cfg, wrap, btn, !wrap.classList.contains("fullscreen"));
+    });
+  });
+
+  // Esc sale del mapa que esté en pantalla completa (si hay alguno activo)
+  document.addEventListener("keydown", function(e){
+    if(e.key !== "Escape") return;
+    mapFullscreenConfigs.forEach(function(cfg){
+      var wrap = document.getElementById(cfg.wrapId);
+      var btn = document.getElementById(cfg.btnId);
+      if(wrap && btn && wrap.classList.contains("fullscreen")){
+        setMapFullscreen(cfg, wrap, btn, false);
+      }
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // Render principal
+  // ---------------------------------------------------------------
+  function renderAll(){
+    document.getElementById("generalEmpty").style.display = state.loaded ? "none" : "block";
+    document.getElementById("generalContent").style.display = state.loaded ? "block" : "none";
+    document.getElementById("detalleEmpty").style.display = state.loaded ? "none" : "block";
+    document.getElementById("detalleContent").style.display = state.loaded ? "block" : "none";
+
+    if(!state.loaded) return;
+
+    renderGeneralKPIs(state.records);
+    renderCharts(state.records);
+    renderMapGeneral(state.records);
+    populateFilters();
+    applyFiltersAndRender();
+  }
+
+  function renderGeneralKPIs(records){
+    document.getElementById("kpiGeneralCIS").textContent = records.length;
+    var hogares = records.reduce(function(s,r){ return s + r.hogaresValidado; },0);
+    var ninos = records.reduce(function(s,r){ return s + r.ninosValidado; },0);
+    var ninas = records.reduce(function(s,r){ return s + r.ninasValidado; },0);
+    document.getElementById("kpiGeneralHogares").textContent = hogares.toLocaleString("es-HN");
+    document.getElementById("kpiGeneralNinez").textContent = (ninos+ninas).toLocaleString("es-HN");
+    document.getElementById("kpiGeneralNinezSub").textContent = ninos + " niños · " + ninas + " niñas";
+  }
+
+  function aggregateByMunicipio(records){
+    var agg = {};
+    records.forEach(function(r){
+      var m = r.municipio;
+      if(!agg[m]) agg[m] = {cis:0, hogares:0, ninez:0};
+      agg[m].cis += 1;
+      agg[m].hogares += r.hogaresValidado;
+      agg[m].ninez += r.ninezValidadaTotal;
+    });
+    return agg;
+  }
+
+  function renderBarList(containerId, agg, key){
+    var container = document.getElementById(containerId);
+    var entries = Object.keys(agg).map(function(m){ return {municipio:m, value:agg[m][key]}; });
+    var max = Math.max.apply(null, entries.map(function(e){ return e.value; }).concat([1]));
+    container.innerHTML = entries.map(function(e){
+      var pct = Math.round((e.value / max) * 100);
+      var color = colorForMunicipio(e.municipio);
+      return '<div class="bar-row">' +
+        '<div class="m-label">' + escapeHtml(e.municipio) + '</div>' +
+        '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%;background:' + color + ';"></div></div>' +
+        '<div class="m-value">' + e.value.toLocaleString("es-HN") + '</div>' +
+      '</div>';
+    }).join("") || '<p style="font-size:12.5px;color:var(--wv-gray-light);">Sin datos</p>';
+  }
+
+  function renderCharts(records){
+    var agg = aggregateByMunicipio(records);
+    renderBarList("chartCIS", agg, "cis");
+    renderBarList("chartHogares", agg, "hogares");
+    renderBarList("chartNinez", agg, "ninez");
+  }
+
+  function renderLegend(containerId, records){
+    var municipios = Array.from(new Set(records.map(function(r){ return r.municipio; })));
+    var el = document.getElementById(containerId);
+    el.innerHTML = municipios.map(function(m){
+      return '<span><span class="dot" style="background:' + colorForMunicipio(m) + '"></span>' + escapeHtml(m) + '</span>';
+    }).join("");
+  }
+
+  function popupContent(r){
+    var fInfo = factibilidadInfo(r.factibilidad);
+    return '<div style="font-family:Inter,system-ui,sans-serif;font-size:12.5px;line-height:1.5;">' +
+      '<strong style="font-size:13.5px;">' + escapeHtml(r.nombreCis) + '</strong><br>' +
+      escapeHtml(r.comunidad) + ', ' + escapeHtml(r.municipio) + '<br>' +
+      '🏠 ' + r.hogaresValidado + ' hogares · 🧒 ' + r.ninezValidadaTotal + ' niñez<br>' +
+      '<span class="badge ' + fInfo.cls + '" style="margin-top:4px;">' + escapeHtml(fInfo.label) + '</span>' +
+    '</div>';
+  }
+
+  // ---------------------------------------------------------------
+  // Medición de distancia y tiempo por carretera (OSRM)
+  // ---------------------------------------------------------------
+  // Usa el servidor demo público de OSRM (router.project-osrm.org), que enruta
+  // sobre la red vial real de OpenStreetMap (no línea recta). Es un servicio
+  // gratuito de uso razonable/no comercial: requiere conexión a internet y no
+  // garantiza disponibilidad ni límites de uso estrictos (recomendado no hacer
+  // más de 1 solicitud por segundo, lo cual encaja con un uso manual como este).
+  // Distancia en línea recta entre 2 puntos (fórmula de Haversine), en kilómetros.
+  // Utilidad compartida por "Medir distancia" (respaldo cuando no hay ruta real) y por
+  // "Household Geo Count" (para saber qué CIS caen dentro del radio elegido).
+  function haversineKm(p1, p2){
+    var R = 6371;
+    var toRad = function(d){ return d * Math.PI / 180; };
+    var dLat = toRad(p2.lat - p1.lat);
+    var dLon = toRad(p2.lng - p1.lng);
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(toRad(p1.lat)) * Math.cos(toRad(p2.lat)) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  function createMeasureTool(config){
+    var el = {
+      toggleBtn: document.getElementById(config.toggleBtnId),
+      modeGroup: document.getElementById(config.modeGroupId),
+      result: document.getElementById(config.resultId),
+      hint: document.getElementById(config.hintId)
+    };
+    // st.pending: primer punto de un par en construcción (mientras se espera el segundo clic).
+    // st.measurements: todas las mediciones ya completadas, cada una con sus propias capas en
+    // el mapa (2 pines, línea/ruta y etiqueta de km/tiempo), para poder mostrarlas todas a la vez.
+    var st = { active:false, mode:"foot", pending:null, measurements:[], nextId:1 };
+
+    var MEASURE_COLORS = ["#2C4A6E","#F2591C","#1F9E6D","#8E44AD","#C0392B","#117A8B"];
+    function colorForId(id){ return MEASURE_COLORS[(id - 1) % MEASURE_COLORS.length]; }
+
+    var beforeActivateCb = null;
+
+    function setActive(v){
+      if(v && beforeActivateCb) beforeActivateCb();
+      st.active = v;
+      config.map.getContainer().style.cursor = v ? "crosshair" : "";
+      el.toggleBtn.classList.toggle("active", v);
+      el.toggleBtn.textContent = v ? "✕ Cancelar medición" : "📏 Medir distancia por carretera";
+      el.modeGroup.style.display = v ? "flex" : "none";
+      if(!v){
+        cancelPending();
+        el.hint.textContent = "";
+      } else {
+        updateHint();
+      }
+    }
+
+    function cancelPending(){
+      if(st.pending){
+        config.map.removeLayer(st.pending.marker);
+        st.pending = null;
+      }
+    }
+
+    function updateHint(){
+      if(st.pending){
+        el.hint.textContent = "Ahora selecciona el segundo punto para calcular la ruta.";
+      } else if(st.measurements.length === 0){
+        el.hint.textContent = "Selecciona el primer punto en el mapa (puede ser un CIS o cualquier lugar).";
+      } else {
+        el.hint.textContent = "Selecciona un nuevo punto para medir otra distancia (las mediciones anteriores se conservan).";
+      }
+    }
+
+    function addPointMarker(latlng, label, color){
+      var icon = L.divIcon({
+        className:"",
+        html:'<div class="measure-pin" style="background:' + color + ';">' + label + '</div>',
+        iconSize:[24,24], iconAnchor:[12,12]
+      });
+      return L.marker(latlng, {icon:icon, zIndexOffset:1000, interactive:false}).addTo(config.map);
+    }
+
+    function fitToEverything(){
+      var pts = [];
+      st.measurements.forEach(function(m){ pts.push(m.p1, m.p2); });
+      if(st.pending) pts.push(st.pending.latlng);
+      if(pts.length === 0) return;
+      if(pts.length === 1){ config.map.setView(pts[0], 14); return; }
+      config.map.fitBounds(L.latLngBounds(pts), {padding:[40,40]});
+    }
+
+    function selectPoint(latlng){
+      if(!st.active) return;
+      if(!st.pending){
+        // Primer punto de un nuevo par: se marca en gris neutro hasta completar el par.
+        var tempMarker = addPointMarker(latlng, st.nextId, "#8E8E93");
+        st.pending = { latlng:latlng, marker:tempMarker };
+        updateHint();
+      } else {
+        var p1 = st.pending.latlng, p2 = latlng, id = st.nextId++;
+        var color = colorForId(id);
+        config.map.removeLayer(st.pending.marker);
+        var measurement = {
+          id:id, mode:st.mode, p1:p1, p2:p2, color:color,
+          markers:[addPointMarker(p1, id, color), addPointMarker(p2, id, color)],
+          routeLayer:null, labelMarker:null, distanceKm:null, durationS:null, isApprox:null
+        };
+        st.pending = null;
+        st.measurements.push(measurement);
+        fitToEverything();
+        renderResultsList();
+        fetchRouteFor(measurement);
+        updateHint();
+      }
+    }
+
+    function formatDuration(seconds){
+      var totalMin = Math.round(seconds / 60);
+      if(totalMin < 1) return "menos de 1 min";
+      if(totalMin < 60) return totalMin + " min";
+      var h = Math.floor(totalMin / 60), m = totalMin % 60;
+      return h + " h" + (m > 0 ? " " + m + " min" : "");
+    }
+
+    // Velocidades promedio asumidas por modo. Se usan (a) siempre, como respaldo cuando
+    // la ruta real no se pudo calcular (estimación en línea recta); y (b) en el caso de
+    // motocicleta, también para calcular el tiempo directamente, ya que reutilizamos la
+    // red de caminos de bicicleta (que sí entra a trochas/caminos de tierra) pero a una
+    // velocidad de motocicleta en vez de velocidad de pedaleo.
+    var ASSUMED_SPEED_KMH = { foot: 5, driving: 35, motorcycle: 30 };
+
+    var MODE_INFO = {
+      foot: {icon:"🚶", label:"A pie"},
+      driving: {icon:"🚗", label:"En vehículo"},
+      motorcycle: {icon:"🏍️", label:"En motocicleta"}
+    };
+
+    function labelText(m){
+      return m.distanceKm.toFixed(1) + " km · " + formatDuration(m.durationS);
+    }
+
+    function drawMeasurementLine(m, coords, dashed){
+      if(m.routeLayer) config.map.removeLayer(m.routeLayer);
+      m.routeLayer = L.polyline(coords, {
+        color:m.color, weight:5, opacity:0.85, dashArray: dashed ? "8,8" : null, interactive:false
+      }).addTo(config.map);
+    }
+
+    function drawMeasurementLabel(m, coords, text){
+      if(m.labelMarker) config.map.removeLayer(m.labelMarker);
+      var mid = coords[Math.floor(coords.length / 2)];
+      var icon = L.divIcon({
+        className:"",
+        html:'<div class="measure-line-label" style="border-color:' + m.color + ';">' + text + '</div>',
+        iconSize:[0,0], iconAnchor:[0,0]
+      });
+      m.labelMarker = L.marker(mid, {icon:icon, interactive:false, zIndexOffset:900}).addTo(config.map);
+    }
+
+    // Cada modo usa el servidor dedicado a ese perfil de OSRM (routing.openstreetmap.de):
+    // - "foot" -> routed-foot (a pie)
+    // - "driving" -> routed-car (vehículo)
+    // - "motorcycle" -> routed-bike (reutiliza la red vial de bicicleta, ver nota arriba)
+    // Esto es más confiable que el servidor genérico de router.project-osrm.org, que solo
+    // enruta en vehículo sin importar el perfil solicitado en la URL.
+    function buildOsrmUrl(mode, p1, p2){
+      var base;
+      if(mode === "foot") base = "https://routing.openstreetmap.de/routed-foot/route/v1/foot/";
+      else if(mode === "motorcycle") base = "https://routing.openstreetmap.de/routed-bike/route/v1/cycling/";
+      else base = "https://routing.openstreetmap.de/routed-car/route/v1/driving/";
+      return base + p1.lng + "," + p1.lat + ";" + p2.lng + "," + p2.lat +
+        "?overview=full&geometries=geojson";
+    }
+
+    function fetchRouteFor(m){
+      var url = buildOsrmUrl(m.mode, m.p1, m.p2);
+      fetch(url).then(function(resp){ return resp.json(); }).then(function(data){
+        if(data.code !== "Ok" || !data.routes || !data.routes.length){
+          throw new Error("sin ruta");
+        }
+        var route = data.routes[0];
+        var coords = route.geometry.coordinates.map(function(c){ return [c[1], c[0]]; });
+        var distanceKm = route.distance / 1000;
+        // Para motocicleta se ignora la duración que devuelve OSRM (asume velocidad de
+        // pedaleo) y se calcula el tiempo con la velocidad de moto sobre la distancia real.
+        var durationS = (m.mode === "motorcycle")
+          ? (distanceKm / ASSUMED_SPEED_KMH.motorcycle) * 3600
+          : route.duration;
+        m.distanceKm = distanceKm; m.durationS = durationS; m.isApprox = false;
+        drawMeasurementLine(m, coords, false);
+        drawMeasurementLabel(m, coords, labelText(m));
+        renderResultsList();
+      }).catch(function(){
+        // Respaldo: no se pudo calcular la ruta real -> estimación en línea recta
+        var distKm = haversineKm(m.p1, m.p2);
+        var speed = ASSUMED_SPEED_KMH[m.mode];
+        var durationS = (distKm / speed) * 3600;
+        var coords = [[m.p1.lat, m.p1.lng], [m.p2.lat, m.p2.lng]];
+        m.distanceKm = distKm; m.durationS = durationS; m.isApprox = true;
+        drawMeasurementLine(m, coords, true);
+        drawMeasurementLabel(m, coords, labelText(m));
+        renderResultsList();
+      });
+    }
+
+    function renderResultsList(){
+      if(st.measurements.length === 0){
+        el.result.style.display = "none";
+        el.result.innerHTML = "";
+        return;
+      }
+      el.result.style.display = "flex";
+      var n = st.measurements.length;
+      var header = '<div class="measure-list-header"><span>' + n + (n === 1 ? ' medición activa' : ' mediciones activas') + '</span>' +
+        '<button class="measure-clear-all-btn" type="button">Limpiar todo</button></div>';
+      var items = st.measurements.map(function(m){
+        if(m.distanceKm == null){
+          return '<div class="measure-item"><span class="measure-item-badge" style="background:' + m.color + ';">' + m.id + '</span>' +
+            '<span class="measure-item-loading">Calculando ruta...</span></div>';
+        }
+        var info = MODE_INFO[m.mode];
+        var tail = m.isApprox
+          ? ' · estimación aproximada'
+          : (m.mode === "motorcycle" ? ' · ruta de bicicleta + velocidad estimada' : ' · por carretera');
+        var note = m.isApprox
+          ? '<div class="measure-item-note">⚠ Sin ruta real disponible (sin conexión o sin datos viales); estimación en línea recta.</div>'
+          : (m.mode === "motorcycle" ? '<div class="measure-item-note">ℹ Usa la red de caminos transitables en bicicleta a velocidad estimada de motocicleta (' + ASSUMED_SPEED_KMH.motorcycle + ' km/h).</div>' : '');
+        return '<div class="measure-item" data-id="' + m.id + '"><span class="measure-item-badge" style="background:' + m.color + ';">' + m.id + '</span>' +
+          '<div class="measure-item-body"><div class="measure-item-main">' + info.icon + ' <strong>' + m.distanceKm.toFixed(1) + ' km</strong> · ' + formatDuration(m.durationS) + tail + '</div>' + note + '</div>' +
+          '<button class="measure-item-remove" type="button" data-id="' + m.id + '" title="Eliminar esta medición">✕</button></div>';
+      }).join("");
+      el.result.innerHTML = header + items;
+      el.result.querySelector(".measure-clear-all-btn").addEventListener("click", clearAllMeasurements);
+      el.result.querySelectorAll(".measure-item-remove").forEach(function(btn){
+        btn.addEventListener("click", function(){ removeMeasurement(parseInt(btn.dataset.id, 10)); });
+      });
+    }
+
+    function removeMeasurementLayers(m){
+      m.markers.forEach(function(mk){ config.map.removeLayer(mk); });
+      if(m.routeLayer) config.map.removeLayer(m.routeLayer);
+      if(m.labelMarker) config.map.removeLayer(m.labelMarker);
+    }
+
+    function removeMeasurement(id){
+      var idx = -1;
+      for(var i=0; i<st.measurements.length; i++){ if(st.measurements[i].id === id){ idx = i; break; } }
+      if(idx === -1) return;
+      removeMeasurementLayers(st.measurements[idx]);
+      st.measurements.splice(idx, 1);
+      renderResultsList();
+      updateHint();
+    }
+
+    function clearAllMeasurements(){
+      st.measurements.forEach(removeMeasurementLayers);
+      st.measurements = [];
+      st.nextId = 1;
+      cancelPending();
+      renderResultsList();
+      updateHint();
+    }
+
+    el.toggleBtn.addEventListener("click", function(){ setActive(!st.active); });
+    el.modeGroup.querySelectorAll(".mode-pill").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        el.modeGroup.querySelectorAll(".mode-pill").forEach(function(b){ b.classList.remove("active"); });
+        btn.classList.add("active");
+        st.mode = btn.dataset.mode;
+        // Cambiar el modo recalcula TODAS las mediciones existentes al nuevo modo.
+        st.measurements.forEach(function(m){
+          m.mode = st.mode;
+          m.distanceKm = null;
+        });
+        renderResultsList();
+        st.measurements.forEach(fetchRouteFor);
+      });
+    });
+
+    config.map.on("click", function(e){ selectPoint(e.latlng); });
+
+    return {
+      isActive: function(){ return st.active; },
+      setActive: setActive,
+      onBeforeActivate: function(cb){ beforeActivateCb = cb; },
+      handleMarkerClick: function(latlng){ selectPoint(latlng); }
+    };
+  }
+
+  // ---------------------------------------------------------------
+  // Household Geo Count: cuenta cuántos hogares (suma de "hogaresValidado" de los
+  // CIS) hay dentro de un radio ajustable alrededor de uno o varios puntos elegidos
+  // en el mapa. Admite varios puntos/círculos simultáneos, cada uno con su propio
+  // radio (0–5000 m, deslizador con recálculo en vivo) y su propio color.
+  function createHouseholdCountTool(config){
+    var el = {
+      toggleBtn: document.getElementById(config.toggleBtnId),
+      result: document.getElementById(config.resultId),
+      hint: document.getElementById(config.hintId)
+    };
+    var st = { active:false, circles:[], nextId:1 };
+    var COLORS = ["#1F9E6D","#3B82C4","#9B59B6","#D4A017","#C0392B","#5D6D7E"];
+    var DEFAULT_RADIUS = 500;
+    var beforeActivateCb = null;
+
+    function colorForId(id){ return COLORS[(id - 1) % COLORS.length]; }
+
+    function setActive(v){
+      if(v && beforeActivateCb) beforeActivateCb();
+      st.active = v;
+      config.map.getContainer().style.cursor = v ? "crosshair" : "";
+      el.toggleBtn.classList.toggle("active", v);
+      el.toggleBtn.textContent = v ? "✕ Cancelar conteo" : "🏠 Household Geo Count";
+      el.hint.textContent = v
+        ? "Haz clic en cualquier punto del mapa para colocar un radio y contar las edificaciones (posibles hogares) alrededor."
+        : "";
+    }
+
+    function formatRadius(m){
+      return m >= 1000 ? (m / 1000).toFixed(m % 1000 === 0 ? 0 : 1) + " km" : Math.round(m) + " m";
+    }
+
+    function findCircle(id){
+      for(var i=0; i<st.circles.length; i++){ if(st.circles[i].id === id) return st.circles[i]; }
+      return null;
+    }
+
+    // Cuenta las huellas de edificaciones (las "cajitas" que dibuja el mapa base de
+    // OpenStreetMap) dentro del radio, consultando en vivo la API pública de Overpass.
+    // Esto es un conteo de construcciones, no de hogares exactos — se usa como
+    // referencia aproximada de posibles hogares, ya que Kobo no georreferencia cada
+    // vivienda individualmente.
+    function buildOverpassQuery(lat, lon, radiusMeters){
+      var around = "(around:" + radiusMeters + "," + lat + "," + lon + ")";
+      return "[out:json][timeout:25];" +
+        "(" +
+          "node[\"building\"][\"building\"!=\"no\"]" + around + ";" +
+          "way[\"building\"][\"building\"!=\"no\"]" + around + ";" +
+          "relation[\"building\"][\"building\"!=\"no\"]" + around + ";" +
+        ");" +
+        "out count;";
+    }
+
+    // overpass-api.de es el servidor "oficial", pero es un recurso público compartido que
+    // a veces está saturado o momentáneamente caído. Si falla, se reintenta automáticamente
+    // con un espejo alterno antes de mostrar el error al usuario.
+    var OVERPASS_ENDPOINTS = [
+      "https://overpass-api.de/api/interpreter",
+      "https://overpass.kumi.systems/api/interpreter"
+    ];
+
+    function tryOverpassEndpoint(index, query){
+      if(index >= OVERPASS_ENDPOINTS.length){
+        return Promise.reject(new Error("Todos los servidores de Overpass fallaron"));
+      }
+      return fetch(OVERPASS_ENDPOINTS[index], {
+        method:"POST",
+        headers:{ "Content-Type":"application/x-www-form-urlencoded" },
+        body:"data=" + encodeURIComponent(query)
+      }).then(function(resp){
+        if(!resp.ok) throw new Error("HTTP " + resp.status);
+        return resp.json();
+      }).catch(function(err){
+        console.warn("Overpass endpoint falló:", OVERPASS_ENDPOINTS[index], err);
+        return tryOverpassEndpoint(index + 1, query);
+      });
+    }
+
+    function countBuildingsInRadius(center, radiusMeters){
+      var query = buildOverpassQuery(center.lat, center.lng, radiusMeters);
+      return tryOverpassEndpoint(0, query).then(function(data){
+        var el = data.elements && data.elements[0];
+        var total = el && el.tags && el.tags.total ? parseInt(el.tags.total, 10) : 0;
+        return total;
+      });
+    }
+
+    function itemMainHtml(c){
+      if(c.status === "loading"){
+        return '🏠 Contando edificaciones... (radio ' + formatRadius(c.radius) + ')';
+      }
+      if(c.status === "error"){
+        return '⚠ No se pudo contar (sin conexión con OpenStreetMap o límite del servicio). ' +
+          '<button class="hgc-retry" type="button" data-id="' + c.id + '">Reintentar</button>';
+      }
+      if(c.status === "stale"){
+        return '🏠 <strong>' + (c.buildingCount != null ? c.buildingCount.toLocaleString("es-HN") : "?") +
+          ' edificaciones</strong> · radio anterior, suelta el control para recalcular a ' + formatRadius(c.radius);
+      }
+      if(c.buildingCount == null){
+        return '🏠 Contando edificaciones... (radio ' + formatRadius(c.radius) + ')';
+      }
+      return '🏠 <strong>' + c.buildingCount.toLocaleString("es-HN") + ' edificaciones</strong> (posibles hogares) dentro de ' + formatRadius(c.radius);
+    }
+
+    function updateItemText(c){
+      var mainEl = document.getElementById(config.idPrefix + "-main-" + c.id);
+      if(mainEl) mainEl.innerHTML = itemMainHtml(c);
+    }
+
+    function refreshCount(c){
+      c.status = "loading";
+      c.requestToken = (c.requestToken || 0) + 1;
+      var myToken = c.requestToken;
+      updateItemText(c);
+      countBuildingsInRadius(c.center, c.radius).then(function(total){
+        if(c.requestToken !== myToken) return; // llegó una respuesta vieja, se ignora
+        c.buildingCount = total;
+        c.status = "ready";
+        updateItemText(c);
+      }).catch(function(err){
+        if(c.requestToken !== myToken) return;
+        console.error(err);
+        c.status = "error";
+        updateItemText(c);
+      });
+    }
+
+    function updateCircleVisual(c){
+      if(c.circleLayer) config.map.removeLayer(c.circleLayer);
+      c.circleLayer = L.circle(c.center, {
+        radius:c.radius, color:c.color, weight:2, fillColor:c.color, fillOpacity:0.12, interactive:false
+      }).addTo(config.map);
+    }
+
+    function addPoint(latlng){
+      if(!st.active) return;
+      var id = st.nextId++;
+      var color = colorForId(id);
+      var c = {
+        id:id, center:latlng, radius:DEFAULT_RADIUS, color:color,
+        circleLayer:null, buildingCount:null, status:"loading", requestToken:0,
+        centerMarker: L.marker(latlng, {
+          icon: L.divIcon({ className:"", html:'<div class="hgc-pin" style="background:' + color + ';">' + id + '</div>', iconSize:[24,24], iconAnchor:[12,12] }),
+          interactive:false, zIndexOffset:950
+        }).addTo(config.map)
+      };
+      st.circles.push(c);
+      updateCircleVisual(c);
+      renderResultsList();
+      refreshCount(c);
+    }
+
+    function removeCircleLayers(c){
+      config.map.removeLayer(c.centerMarker);
+      if(c.circleLayer) config.map.removeLayer(c.circleLayer);
+    }
+
+    function removeCircle(id){
+      var idx = -1;
+      for(var i=0; i<st.circles.length; i++){ if(st.circles[i].id === id){ idx = i; break; } }
+      if(idx === -1) return;
+      removeCircleLayers(st.circles[idx]);
+      st.circles.splice(idx, 1);
+      renderResultsList();
+    }
+
+    function clearAll(){
+      st.circles.forEach(removeCircleLayers);
+      st.circles = [];
+      st.nextId = 1;
+      renderResultsList();
+    }
+
+    function renderResultsList(){
+      if(st.circles.length === 0){
+        el.result.style.display = "none";
+        el.result.innerHTML = "";
+        return;
+      }
+      el.result.style.display = "flex";
+      var n = st.circles.length;
+      var header = '<div class="measure-list-header"><span>' + n + (n === 1 ? ' punto activo' : ' puntos activos') + '</span>' +
+        '<button class="measure-clear-all-btn" type="button">Limpiar todo</button></div>';
+      var items = st.circles.map(function(c){
+        return '<div class="hgc-item" data-id="' + c.id + '"><span class="measure-item-badge" style="background:' + c.color + ';">' + c.id + '</span>' +
+          '<div class="hgc-item-body">' +
+            '<div class="hgc-item-main" id="' + config.idPrefix + '-main-' + c.id + '">' + itemMainHtml(c) + '</div>' +
+            '<div class="hgc-radius-row">' +
+              '<input type="range" min="0" max="5000" step="50" value="' + c.radius + '" class="hgc-slider" data-id="' + c.id + '">' +
+              '<span class="hgc-radius-value" id="' + config.idPrefix + '-radiusval-' + c.id + '">' + formatRadius(c.radius) + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<button class="measure-item-remove" type="button" data-id="' + c.id + '" title="Eliminar este punto">✕</button></div>';
+      }).join("");
+      el.result.innerHTML = header + items;
+    }
+
+    // Delegación de eventos sobre el contenedor de resultados: como el texto de cada
+    // medición se reemplaza parcialmente (p.ej. al pasar a "Contando..." o "Reintentar"),
+    // usar delegación evita tener que re-enganchar listeners cada vez que cambia el texto.
+    el.result.addEventListener("click", function(e){
+      var removeBtn = e.target.closest(".measure-item-remove");
+      if(removeBtn){ removeCircle(parseInt(removeBtn.dataset.id, 10)); return; }
+      var clearBtn = e.target.closest(".measure-clear-all-btn");
+      if(clearBtn){ clearAll(); return; }
+      var retryBtn = e.target.closest(".hgc-retry");
+      if(retryBtn){
+        var c = findCircle(parseInt(retryBtn.dataset.id, 10));
+        if(c) refreshCount(c);
+      }
+    });
+    // Mientras se arrastra el deslizador (input): solo se redibuja el círculo y el
+    // radio mostrado, sin llamar a Overpass en cada pixel de movimiento.
+    el.result.addEventListener("input", function(e){
+      if(!e.target.classList.contains("hgc-slider")) return;
+      var id = parseInt(e.target.dataset.id, 10);
+      var c = findCircle(id);
+      if(!c) return;
+      c.radius = parseInt(e.target.value, 10);
+      updateCircleVisual(c);
+      c.status = "stale";
+      updateItemText(c);
+      var radiusValEl = document.getElementById(config.idPrefix + "-radiusval-" + id);
+      if(radiusValEl) radiusValEl.textContent = formatRadius(c.radius);
+    });
+    // Al soltar el deslizador (change): ahí sí se recalcula el conteo real contra Overpass.
+    el.result.addEventListener("change", function(e){
+      if(!e.target.classList.contains("hgc-slider")) return;
+      var id = parseInt(e.target.dataset.id, 10);
+      var c = findCircle(id);
+      if(!c) return;
+      refreshCount(c);
+    });
+
+    el.toggleBtn.addEventListener("click", function(){ setActive(!st.active); });
+    config.map.on("click", function(e){ addPoint(e.latlng); });
+
+    return {
+      isActive: function(){ return st.active; },
+      setActive: setActive,
+      onBeforeActivate: function(cb){ beforeActivateCb = cb; },
+      handleMarkerClick: function(latlng){ addPoint(latlng); }
+    };
+  }
+
+  function renderMapGeneral(records){
+    if(!mapGeneral){
+      mapGeneral = L.map("mapGeneral");
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom:19,
+        attribution:"&copy; OpenStreetMap contributors"
+      }).addTo(mapGeneral);
+      measureGeneral = createMeasureTool({
+        map: mapGeneral,
+        toggleBtnId:"measureToggleGeneral",
+        modeGroupId:"measureModeGeneral",
+        resultId:"measureResultGeneral",
+        hintId:"measureHintGeneral"
+      });
+      hgcGeneral = createHouseholdCountTool({
+        map: mapGeneral,
+        toggleBtnId:"householdToggleGeneral",
+        resultId:"householdResultGeneral",
+        hintId:"householdHintGeneral",
+        idPrefix:"hgcGeneral"
+      });
+      // Solo una herramienta de interacción con el mapa puede estar activa a la vez.
+      measureGeneral.onBeforeActivate(function(){ if(hgcGeneral.isActive()) hgcGeneral.setActive(false); });
+      hgcGeneral.onBeforeActivate(function(){ if(measureGeneral.isActive()) measureGeneral.setActive(false); });
+      // Clic en un área vacía del mapa (no en un punto) limpia la selección actual.
+      mapGeneral.on("click", function(){
+        if(measureGeneral && measureGeneral.isActive()) return;
+        if(hgcGeneral && hgcGeneral.isActive()) return;
+        clearMapSelection();
+      });
+    }
+    markersGeneral.forEach(function(m){ mapGeneral.removeLayer(m); });
+    markersGeneral = [];
+
+    var pts = records.filter(function(r){ return !isNaN(r.lat) && !isNaN(r.lon) && r.lat !== 0 && r.lon !== 0; });
+    pts.forEach(function(r){
+      var marker = L.circleMarker([r.lat, r.lon], markerBaseStyle(r)).addTo(mapGeneral);
+      marker.cisRecord = r;
+      marker.bindTooltip(popupContent(r), {direction:"top", sticky:true, opacity:1, className:"cis-tooltip"});
+      marker.on("click", function(e){
+        L.DomEvent.stopPropagation(e);
+        if(measureGeneral && measureGeneral.isActive()){
+          measureGeneral.handleMarkerClick(marker.getLatLng());
+          return;
+        }
+        if(hgcGeneral && hgcGeneral.isActive()){
+          hgcGeneral.handleMarkerClick(marker.getLatLng());
+          return;
+        }
+        var isMulti = !!(e.originalEvent && (e.originalEvent.ctrlKey || e.originalEvent.metaKey));
+        handleMapMarkerSelect(r.uuid, isMulti, /*fromGeneralMap=*/true);
+      });
+      markersGeneral.push(marker);
+    });
+
+    fitMapToPoints(mapGeneral, pts);
+    renderLegend("legendGeneral", records);
+    refreshSelectionStyles();
+    setTimeout(function(){ mapGeneral.invalidateSize(); }, 60);
+  }
+
+  function fitMapToPoints(map, pts){
+    if(pts.length === 0){
+      map.setView([14.9, -87.8], 8); // vista por defecto centrada en Comayagua, Honduras
+      return;
+    }
+    if(pts.length === 1){
+      map.setView([pts[0].lat, pts[0].lon], 14);
+      return;
+    }
+    var bounds = L.latLngBounds(pts.map(function(p){ return [p.lat, p.lon]; }));
+    map.fitBounds(bounds, {padding:[30,30]});
+  }
+
+  // ---------------------------------------------------------------
+  // Filtros en cascada (selección múltiple con casillas)
+  // ---------------------------------------------------------------
+  var btnReset = document.getElementById("filterReset");
+
+  function uniqueSorted(arr){
+    return Array.from(new Set(arr)).sort(function(a,b){ return String(a).localeCompare(String(b),"es"); });
+  }
+
+  function normalizeSearch(s){
+    return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
+  // Componente reutilizable: dropdown con casillas + buscador.
+  // setOptions(lista) recalcula las opciones visibles y "poda" (quita) cualquier
+  // selección previa que ya no exista en la nueva lista (p.ej. al cambiar Municipio,
+  // las Comunidades que ya no pertenecen a ese municipio se desmarcan solas).
+  function createMultiSelect(cfg){
+    var dropdown = document.getElementById(cfg.dropdownId);
+    var trigger = document.getElementById(cfg.triggerId);
+    var textEl = document.getElementById(cfg.textId);
+    var searchInput = document.getElementById(cfg.searchId);
+    var optionsEl = document.getElementById(cfg.optionsId);
+    var allOptions = []; // [{value, label}] — value = identificador único, label = texto visible
+    var selected = []; // arreglo de "value" seleccionados
+
+    // Admite tanto strings simples (Municipio/Comunidad, donde value===label) como
+    // objetos {value,label} (CIS, donde el value es un uuid único y el label puede
+    // repetirse entre varios registros, p.ej. dos CIS distintos llamados "Centro Comunal").
+    function normalizeList(list){
+      return list.map(function(o){ return (typeof o === "string") ? {value:o, label:o} : o; });
+    }
+
+    function findOpt(value){
+      for(var i=0; i<allOptions.length; i++){ if(allOptions[i].value === value) return allOptions[i]; }
+      return null;
+    }
+
+    function visibleOptions(){
+      var q = normalizeSearch(searchInput.value.trim());
+      if(!q) return allOptions.slice();
+      return allOptions.filter(function(o){ return normalizeSearch(o.label).indexOf(q) !== -1; });
+    }
+
+    function renderOptions(){
+      var opts = visibleOptions();
+      if(opts.length === 0){
+        optionsEl.innerHTML = '<div class="ms-empty">Sin resultados</div>';
+        return;
+      }
+      optionsEl.innerHTML = opts.map(function(o){
+        var checked = selected.indexOf(o.value) !== -1 ? " checked" : "";
+        return '<label class="ms-option"><input type="checkbox" value="' + escapeHtml(o.value) + '"' + checked + '> <span>' + escapeHtml(o.label) + '</span></label>';
+      }).join("");
+    }
+
+    function updateTriggerText(){
+      if(selected.length === 0){
+        textEl.textContent = "Todos";
+        trigger.classList.remove("has-selection");
+      } else if(selected.length === 1){
+        var o = findOpt(selected[0]);
+        textEl.textContent = o ? o.label : selected[0];
+        trigger.classList.add("has-selection");
+      } else {
+        textEl.textContent = selected.length + " seleccionados";
+        trigger.classList.add("has-selection");
+      }
+    }
+
+    function setOptions(newOptions){
+      allOptions = normalizeList(newOptions);
+      var validValues = allOptions.map(function(o){ return o.value; });
+      selected = selected.filter(function(v){ return validValues.indexOf(v) !== -1; });
+      renderOptions();
+      updateTriggerText();
+      return selected.slice();
+    }
+
+    function open(){
+      document.querySelectorAll(".ms-dropdown.open").forEach(function(d){ if(d !== dropdown) d.classList.remove("open"); });
+      searchInput.value = "";
+      renderOptions();
+      dropdown.classList.add("open");
+      setTimeout(function(){ searchInput.focus(); }, 0);
+    }
+    function close(){ dropdown.classList.remove("open"); }
+
+    trigger.addEventListener("click", function(e){
+      e.stopPropagation();
+      if(dropdown.classList.contains("open")) close(); else open();
+    });
+    searchInput.addEventListener("click", function(e){ e.stopPropagation(); });
+    searchInput.addEventListener("input", renderOptions);
+    optionsEl.addEventListener("click", function(e){ e.stopPropagation(); });
+    optionsEl.addEventListener("change", function(e){
+      if(e.target.type !== "checkbox") return;
+      var val = e.target.value;
+      if(e.target.checked){
+        if(selected.indexOf(val) === -1) selected.push(val);
+      } else {
+        selected = selected.filter(function(v){ return v !== val; });
+      }
+      updateTriggerText();
+      cfg.onChange(selected.slice());
+    });
+
+    dropdown.querySelector('[data-action="all"]').addEventListener("click", function(e){
+      e.stopPropagation();
+      visibleOptions().forEach(function(o){ if(selected.indexOf(o.value) === -1) selected.push(o.value); });
+      renderOptions();
+      updateTriggerText();
+      cfg.onChange(selected.slice());
+    });
+    dropdown.querySelector('[data-action="none"]').addEventListener("click", function(e){
+      e.stopPropagation();
+      var q = searchInput.value.trim();
+      if(q){
+        var visVals = visibleOptions().map(function(o){ return o.value; });
+        selected = selected.filter(function(v){ return visVals.indexOf(v) === -1; });
+      } else {
+        selected = [];
+      }
+      renderOptions();
+      updateTriggerText();
+      cfg.onChange(selected.slice());
+    });
+
+    function setSelectedValues(vals){
+      var validValues = allOptions.map(function(o){ return o.value; });
+      selected = vals.filter(function(v){ return validValues.indexOf(v) !== -1; });
+      renderOptions();
+      updateTriggerText();
+      return selected.slice();
+    }
+
+    return {
+      setOptions: setOptions,
+      setSelectedValues: setSelectedValues,
+      getSelected: function(){ return selected.slice(); },
+      reset: function(){ selected = []; renderOptions(); updateTriggerText(); },
+      close: close
+    };
+  }
+
+  // Cierra cualquier dropdown abierto al hacer clic fuera de él
+  document.addEventListener("click", function(){
+    document.querySelectorAll(".ms-dropdown.open").forEach(function(d){ d.classList.remove("open"); });
+  });
+
+  var msMunicipio = createMultiSelect({
+    dropdownId:"msMunicipio", triggerId:"msMunicipioTrigger", textId:"msMunicipioText",
+    searchId:"msMunicipioSearch", optionsId:"msMunicipioOptions",
+    onChange: function(sel){
+      filters.municipio = sel;
+      updateComunidadOptions();
+      applyFiltersAndRender();
+    }
+  });
+  var msComunidad = createMultiSelect({
+    dropdownId:"msComunidad", triggerId:"msComunidadTrigger", textId:"msComunidadText",
+    searchId:"msComunidadSearch", optionsId:"msComunidadOptions",
+    onChange: function(sel){
+      filters.comunidad = sel;
+      updateCISOptions();
+      applyFiltersAndRender();
+    }
+  });
+  var msCIS = createMultiSelect({
+    dropdownId:"msCIS", triggerId:"msCISTrigger", textId:"msCISText",
+    searchId:"msCISSearch", optionsId:"msCISOptions",
+    onChange: function(sel){
+      filters.cis = sel;
+      applyFiltersAndRender();
+    }
+  });
+
+  function populateFilters(){
+    filters.municipio = msMunicipio.setOptions(uniqueSorted(state.records.map(function(r){ return r.municipio; })));
+    updateComunidadOptions();
+  }
+
+  function updateComunidadOptions(){
+    var base = filters.municipio.length === 0 ? state.records : state.records.filter(function(r){ return filters.municipio.indexOf(r.municipio) !== -1; });
+    filters.comunidad = msComunidad.setOptions(uniqueSorted(base.map(function(r){ return r.comunidad; })));
+    updateCISOptions();
+  }
+
+  // Registros que cumplen Municipio + Comunidad (sin aplicar aún el filtro de CIS).
+  // Se usa para decidir qué puntos se DIBUJAN en los mapas: así, aunque el filtro de
+  // CIS (o una selección hecha directamente en el mapa) reduzca las tarjetas/KPIs a
+  // un subconjunto, los puntos no seleccionados siguen visibles en el mapa (atenuados)
+  // en vez de desaparecer.
+  function getMunicipioComunidadFiltered(){
+    return state.records.filter(function(r){
+      return (filters.municipio.length === 0 || filters.municipio.indexOf(r.municipio) !== -1) &&
+             (filters.comunidad.length === 0 || filters.comunidad.indexOf(r.comunidad) !== -1);
+    });
+  }
+
+  // Construye las opciones del filtro de CIS usando el uuid de cada registro como
+  // identificador (no el nombre): así, si dos CIS distintos comparten nombre (p.ej.
+  // "Centro Comunal" en dos comunidades), se listan y seleccionan por separado. Cuando
+  // un nombre se repite dentro del conjunto visible, se le agrega la comunidad para
+  // diferenciarlos en la lista.
+  function buildCisOptions(records){
+    var nameCounts = {};
+    records.forEach(function(r){ nameCounts[r.nombreCis] = (nameCounts[r.nombreCis] || 0) + 1; });
+    var seen = {};
+    var opts = [];
+    records.forEach(function(r){
+      if(seen[r.uuid]) return;
+      seen[r.uuid] = true;
+      var label = r.nombreCis + (nameCounts[r.nombreCis] > 1 ? " — " + r.comunidad : "");
+      opts.push({ value:r.uuid, label:label });
+    });
+    opts.sort(function(a,b){ return a.label.localeCompare(b.label, "es"); });
+    return opts;
+  }
+
+  function updateCISOptions(){
+    filters.cis = msCIS.setOptions(buildCisOptions(getMunicipioComunidadFiltered()));
+  }
+
+  btnReset.addEventListener("click", function(){
+    resetFilters();
+    populateFilters();
+    applyFiltersAndRender();
+  });
+
+  function resetFilters(){
+    filters = { municipio:[], comunidad:[], cis:[] };
+    msMunicipio.reset();
+    msComunidad.reset();
+    msCIS.reset();
+  }
+
+  function getFilteredRecords(){
+    return state.records.filter(function(r){
+      return (filters.municipio.length === 0 || filters.municipio.indexOf(r.municipio) !== -1) &&
+             (filters.comunidad.length === 0 || filters.comunidad.indexOf(r.comunidad) !== -1) &&
+             (filters.cis.length === 0 || filters.cis.indexOf(r.uuid) !== -1);
+    });
+  }
+
+  // ---------------------------------------------------------------
+  // Selección de puntos directamente sobre el mapa (General y Detalle)
+  // ---------------------------------------------------------------
+  // La selección reutiliza filters.cis como única fuente de verdad, para que
+  // quede sincronizada con el filtro de casillas "CIS": marcar una casilla
+  // resalta el punto en el mapa, y hacer clic en un punto marca su casilla.
+  //
+  // Clic normal  -> selecciona SOLO ese punto (reemplaza la selección anterior).
+  // Ctrl/Cmd+clic -> agrega o quita ese punto de la selección actual (multi-selección).
+  // Clic en el mapa (fuera de un punto) -> limpia la selección.
+  //
+  // El mapa General no está acotado por los filtros de Municipio/Comunidad (siempre
+  // muestra todos los puntos), así que si se selecciona ahí un punto que quedaría
+  // excluido por un filtro de Municipio/Comunidad activo, esos dos filtros se
+  // reinician para evitar una combinación imposible (0 resultados).
+  function handleMapMarkerSelect(cisUuid, isMulti, fromGeneralMap){
+    if(fromGeneralMap && (filters.municipio.length > 0 || filters.comunidad.length > 0)){
+      msMunicipio.reset();
+      msComunidad.reset();
+      filters.municipio = [];
+      filters.comunidad = [];
+      populateFilters();
+    }
+    var current = filters.cis.slice();
+    if(isMulti){
+      var idx = current.indexOf(cisUuid);
+      if(idx === -1) current.push(cisUuid); else current.splice(idx, 1);
+    } else {
+      current = [cisUuid];
+    }
+    filters.cis = msCIS.setSelectedValues(current);
+    applyFiltersAndRender();
+  }
+
+  function clearMapSelection(){
+    if(filters.cis.length === 0) return;
+    filters.cis = msCIS.setSelectedValues([]);
+    applyFiltersAndRender();
+  }
+
+  function markerBaseStyle(record){
+    return { radius:8, color:"#fff", weight:2, fillColor:colorForMunicipio(record.municipio), fillOpacity:0.9 };
+  }
+  function markerSelectedStyle(record){
+    return { radius:10, color:"#F2591C", weight:3, fillColor:colorForMunicipio(record.municipio), fillOpacity:1 };
+  }
+  function markerFadedStyle(record){
+    return { radius:7, color:"#fff", weight:1, fillColor:colorForMunicipio(record.municipio), fillOpacity:0.15 };
+  }
+
+  // Aplica el resaltado/atenuado según filters.cis a los marcadores YA dibujados
+  // en ambos mapas, sin volver a crearlos.
+  function refreshSelectionStyles(){
+    var selection = filters.cis;
+    var active = selection.length > 0;
+    [markersGeneral, markersDetail].forEach(function(list){
+      list.forEach(function(m){
+        var r = m.cisRecord;
+        if(!r) return;
+        if(!active){
+          m.setStyle(markerBaseStyle(r));
+        } else if(selection.indexOf(r.uuid) !== -1){
+          m.setStyle(markerSelectedStyle(r));
+          m.bringToFront();
+        } else {
+          m.setStyle(markerFadedStyle(r));
+        }
+      });
+    });
+  }
+
+  function applyFiltersAndRender(){
+    var filtered = getFilteredRecords();
+    document.getElementById("resultCount").textContent =
+      filtered.length + " de " + state.records.length + " CIS coinciden con el filtro seleccionado.";
+
+    document.getElementById("kpiDetalleCIS").textContent = filtered.length;
+    var hogares = filtered.reduce(function(s,r){ return s + r.hogaresValidado; },0);
+    var ninos = filtered.reduce(function(s,r){ return s + r.ninosValidado; },0);
+    var ninas = filtered.reduce(function(s,r){ return s + r.ninasValidado; },0);
+    document.getElementById("kpiDetalleHogares").textContent = hogares.toLocaleString("es-HN");
+    document.getElementById("kpiDetalleNinez").textContent = (ninos+ninas).toLocaleString("es-HN");
+    document.getElementById("kpiDetalleNinezSub").textContent = ninos + " niños · " + ninas + " niñas";
+
+    // El mapa de Detalle dibuja todos los puntos dentro del filtro de Municipio/Comunidad
+    // (sin aplicar aún el de CIS), para que la selección de CIS solo resalte/atenúe
+    // en vez de hacer desaparecer puntos del mapa.
+    renderMapDetail(getMunicipioComunidadFiltered());
+    renderCISCards(filtered);
+    refreshSelectionStyles();
+  }
+
+  function renderMapDetail(records){
+    if(!mapDetail){
+      mapDetail = L.map("mapDetail");
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom:19,
+        attribution:"&copy; OpenStreetMap contributors"
+      }).addTo(mapDetail);
+      measureDetail = createMeasureTool({
+        map: mapDetail,
+        toggleBtnId:"measureToggleDetail",
+        modeGroupId:"measureModeDetail",
+        resultId:"measureResultDetail",
+        hintId:"measureHintDetail"
+      });
+      hgcDetail = createHouseholdCountTool({
+        map: mapDetail,
+        toggleBtnId:"householdToggleDetail",
+        resultId:"householdResultDetail",
+        hintId:"householdHintDetail",
+        idPrefix:"hgcDetail"
+      });
+      // Solo una herramienta de interacción con el mapa puede estar activa a la vez.
+      measureDetail.onBeforeActivate(function(){ if(hgcDetail.isActive()) hgcDetail.setActive(false); });
+      hgcDetail.onBeforeActivate(function(){ if(measureDetail.isActive()) measureDetail.setActive(false); });
+      // Clic en un área vacía del mapa (no en un punto) limpia la selección actual.
+      mapDetail.on("click", function(){
+        if(measureDetail && measureDetail.isActive()) return;
+        if(hgcDetail && hgcDetail.isActive()) return;
+        clearMapSelection();
+      });
+    }
+    markersDetail.forEach(function(m){ mapDetail.removeLayer(m); });
+    markersDetail = [];
+
+    var pts = records.filter(function(r){ return !isNaN(r.lat) && !isNaN(r.lon) && r.lat !== 0 && r.lon !== 0; });
+    pts.forEach(function(r){
+      var marker = L.circleMarker([r.lat, r.lon], markerBaseStyle(r)).addTo(mapDetail);
+      marker.cisRecord = r;
+      marker.bindTooltip(popupContent(r), {direction:"top", sticky:true, opacity:1, className:"cis-tooltip"});
+      marker.on("click", function(e){
+        L.DomEvent.stopPropagation(e);
+        if(measureDetail && measureDetail.isActive()){
+          measureDetail.handleMarkerClick(marker.getLatLng());
+          return;
+        }
+        if(hgcDetail && hgcDetail.isActive()){
+          hgcDetail.handleMarkerClick(marker.getLatLng());
+          return;
+        }
+        var isMulti = !!(e.originalEvent && (e.originalEvent.ctrlKey || e.originalEvent.metaKey));
+        handleMapMarkerSelect(r.uuid, isMulti, /*fromGeneralMap=*/false);
+      });
+      markersDetail.push(marker);
+    });
+
+    fitMapToPoints(mapDetail, pts);
+    renderLegend("legendDetail", records);
+    setTimeout(function(){ mapDetail.invalidateSize(); }, 60);
+  }
+
+  function diffSpan(n, unit){
+    var cls = n > 0 ? "diff-pos" : (n < 0 ? "diff-neg" : "diff-zero");
+    var sign = n > 0 ? "+" : "";
+    return '<span class="' + cls + '">' + sign + n + " " + unit + '</span>';
+  }
+
+  function renderCISCards(records){
+    var container = document.getElementById("cisCardsContainer");
+    if(records.length === 0){
+      container.innerHTML = '<p style="font-size:13px;color:var(--wv-gray-light);">Ningún CIS coincide con el filtro seleccionado.</p>';
+      return;
+    }
+
+    container.innerHTML = records.map(function(r){
+      var fInfo = factibilidadInfo(r.factibilidad);
+      var riesgosHtml = r.riesgos.length
+        ? '<div class="pill-group">' + r.riesgos.map(function(rg){
+            var isNone = normalize(rg).indexOf("ninguno") !== -1;
+            return '<span class="pill ' + (isNone ? "ok" : "risk") + '">' + escapeHtml(rg) + '</span>';
+          }).join("") + '</div>'
+        : '<span style="font-size:12.5px;color:var(--wv-gray-light);">Sin datos de riesgos</span>';
+
+      var hayVol = normalize(r.hayVoluntarios);
+      var voluntariadoHtml;
+      if(hayVol.indexOf("si") === 0 || hayVol === "si"){
+        if(r.estructuras.length){
+          voluntariadoHtml = r.estructuras.map(function(e){
+            return '<div class="estructura-item">' +
+              '<div class="e-top"><span>' + escapeHtml(e.tipo || "Estructura comunitaria") + (e.nombreGrupo ? " — " + escapeHtml(e.nombreGrupo) : "") + '</span>' +
+              '<span>' + (e.numVoluntarios !== null ? e.numVoluntarios + " vol." : "") + '</span></div>' +
+              (e.disposicion ? '<div class="e-sub">Disposición a participar: ' + escapeHtml(e.disposicion) + '</div>' : '') +
+            '</div>';
+          }).join("");
+        } else {
+          voluntariadoHtml = '<p style="font-size:12.5px;color:var(--wv-gray-light);">Se indicó que sí existe voluntariado, pero no se registraron estructuras específicas.</p>';
+        }
+      } else if(hayVol.indexOf("no") === 0 || hayVol === "no"){
+        voluntariadoHtml = '<p style="font-size:12.5px;color:var(--wv-gray-light);">No se identificó voluntariado comunitario en esta comunidad.</p>';
+      } else {
+        voluntariadoHtml = '<p style="font-size:12.5px;color:var(--wv-gray-light);">Sin dato registrado.</p>';
+      }
+
+      return '<div class="cis-card">' +
+        '<div class="cis-card-head">' +
+          '<div><h3>' + escapeHtml(r.nombreCis) + '</h3>' +
+          '<div class="meta">' + escapeHtml(r.comunidad) + ' · ' + escapeHtml(r.municipio) + '</div></div>' +
+          '<span class="badge ' + fInfo.cls + '">' + escapeHtml(fInfo.label) + '</span>' +
+        '</div>' +
+        '<div class="cis-card-body">' +
+
+          '<div class="data-block">' +
+            '<h4>Espacio</h4>' +
+            '<div class="data-line"><span class="k">Tipo</span><span class="v">' + escapeHtml(r.tipoEspacio || "—") + '</span></div>' +
+            '<div class="data-line"><span class="k">Condición</span><span class="v">' + escapeHtml(r.condicion || "—") + '</span></div>' +
+            '<div class="data-line"><span class="k">Disponibilidad</span><span class="v">' + escapeHtml(r.disponibilidad || "—") + '</span></div>' +
+          '</div>' +
+
+          '<div class="data-block">' +
+            '<h4>Hogares (30 min caminando)</h4>' +
+            '<div class="data-line"><span class="k">Estimación inicial</span><span class="v">' + r.hogaresEstimado + '</span></div>' +
+            '<div class="data-line"><span class="k">Validado por equipo</span><span class="v">' + r.hogaresValidado + '</span></div>' +
+            '<div class="data-line"><span class="k">Diferencia</span>' + diffSpan(r.hogaresDiferencia, "") + '</div>' +
+          '</div>' +
+
+          '<div class="data-block">' +
+            '<h4>Niñez 0–10 años</h4>' +
+            '<div class="data-line"><span class="k">Estimada</span><span class="v">' + r.ninezEstimadaTotal + ' (' + r.ninosEstimado + '♂ / ' + r.ninasEstimado + '♀)</span></div>' +
+            '<div class="data-line"><span class="k">Validada</span><span class="v">' + r.ninezValidadaTotal + ' (' + r.ninosValidado + '♂ / ' + r.ninasValidado + '♀)</span></div>' +
+            '<div class="data-line"><span class="k">Diferencia</span>' + diffSpan(r.ninezDiferencia, "") + '</div>' +
+          '</div>' +
+
+          '<div class="data-block">' +
+            '<h4>Riesgos identificados</h4>' +
+            riesgosHtml +
+          '</div>' +
+
+          '<div class="data-block" style="grid-column:1/-1;">' +
+            '<h4>Voluntariado comunitario</h4>' +
+            voluntariadoHtml +
+          '</div>' +
+
+        '</div>' +
+      '</div>';
+    }).join("");
+  }
+
+  // Estado inicial
+  renderAll();
+
+})();
+</script>
+</body>
+</html>
