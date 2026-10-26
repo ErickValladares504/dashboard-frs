@@ -1907,9 +1907,10 @@
   function renderMapGeneral(records){
     if(!mapGeneral){
       mapGeneral = L.map("mapGeneral");
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom:19,
-        attribution:"&copy; OpenStreetMap contributors"
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        maxZoom:20,
+        subdomains:"abcd",
+        attribution:"&copy; OpenStreetMap contributors &copy; CARTO"
       }).addTo(mapGeneral);
       measureGeneral = createMeasureTool({
         map: mapGeneral,
@@ -2318,9 +2319,10 @@
   function renderMapDetail(records){
     if(!mapDetail){
       mapDetail = L.map("mapDetail");
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom:19,
-        attribution:"&copy; OpenStreetMap contributors"
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        maxZoom:20,
+        subdomains:"abcd",
+        attribution:"&copy; OpenStreetMap contributors &copy; CARTO"
       }).addTo(mapDetail);
       measureDetail = createMeasureTool({
         map: mapDetail,
