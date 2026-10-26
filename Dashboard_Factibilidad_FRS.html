@@ -1716,23 +1716,47 @@
     // con un espejo alterno antes de mostrar el error al usuario.
     var OVERPASS_ENDPOINTS = [
       "https://overpass-api.de/api/interpreter",
-      "https://overpass.kumi.systems/api/interpreter"
+      "https://overpass.kumi.systems/api/interpreter",
+      "https://overpass.openstreetmap.ru/api/interpreter"
     ];
+    var OVERPASS_TIMEOUT_MS = 15000;
 
-    function tryOverpassEndpoint(index, query){
+    function fetchWithTimeout(url, options, timeoutMs){
+      var controller = (typeof AbortController !== "undefined") ? new AbortController() : null;
+      var opts = controller ? Object.assign({}, options, { signal: controller.signal }) : options;
+      var timer = controller ? setTimeout(function(){ controller.abort(); }, timeoutMs) : null;
+      return fetch(url, opts).then(function(resp){
+        if(timer) clearTimeout(timer);
+        return resp;
+      }).catch(function(err){
+        if(timer) clearTimeout(timer);
+        if(err && err.name === "AbortError"){
+          throw new Error("Tiempo de espera agotado (" + (timeoutMs/1000) + "s) en " + url);
+        }
+        throw err;
+      });
+    }
+
+    function tryOverpassEndpoint(index, query, lastErrors){
+      lastErrors = lastErrors || [];
       if(index >= OVERPASS_ENDPOINTS.length){
-        return Promise.reject(new Error("Todos los servidores de Overpass fallaron"));
+        var detail = lastErrors.map(function(e){ return e.host + ": " + e.message; }).join(" | ");
+        var finalErr = new Error("Todos los servidores de Overpass fallaron. " + detail);
+        finalErr.detail = detail;
+        return Promise.reject(finalErr);
       }
-      return fetch(OVERPASS_ENDPOINTS[index], {
+      var host = OVERPASS_ENDPOINTS[index].replace(/^https?:\/\//, "").split("/")[0];
+      return fetchWithTimeout(OVERPASS_ENDPOINTS[index], {
         method:"POST",
         headers:{ "Content-Type":"application/x-www-form-urlencoded" },
         body:"data=" + encodeURIComponent(query)
-      }).then(function(resp){
+      }, OVERPASS_TIMEOUT_MS).then(function(resp){
         if(!resp.ok) throw new Error("HTTP " + resp.status);
         return resp.json();
       }).catch(function(err){
         console.warn("Overpass endpoint falló:", OVERPASS_ENDPOINTS[index], err);
-        return tryOverpassEndpoint(index + 1, query);
+        lastErrors.push({ host: host, message: (err && err.message) ? err.message : String(err) });
+        return tryOverpassEndpoint(index + 1, query, lastErrors);
       });
     }
 
@@ -1751,7 +1775,9 @@
       }
       if(c.status === "error"){
         return '⚠ No se pudo contar (sin conexión con OpenStreetMap o límite del servicio). ' +
-          '<button class="hgc-retry" type="button" data-id="' + c.id + '">Reintentar</button>';
+          '<button class="hgc-retry" type="button" data-id="' + c.id + '">Reintentar</button>' +
+          (c.lastError ? '<div style="margin-top:4px;font-size:11px;color:#9a3412;word-break:break-word;">Detalle: ' +
+            String(c.lastError).replace(/</g,"&lt;") + '</div>' : '');
       }
       if(c.status === "stale"){
         return '🏠 <strong>' + (c.buildingCount != null ? c.buildingCount.toLocaleString("es-HN") : "?") +
@@ -1782,6 +1808,7 @@
         if(c.requestToken !== myToken) return;
         console.error(err);
         c.status = "error";
+        c.lastError = (err && err.message) ? err.message : String(err);
         updateItemText(c);
       });
     }
@@ -1907,10 +1934,9 @@
   function renderMapGeneral(records){
     if(!mapGeneral){
       mapGeneral = L.map("mapGeneral");
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-        maxZoom:20,
-        subdomains:"abcd",
-        attribution:"&copy; OpenStreetMap contributors &copy; CARTO"
+      L.tileLayer("https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png", {
+        maxZoom:19,
+        attribution:"Wikimedia maps beta | Map data &copy; OpenStreetMap contributors"
       }).addTo(mapGeneral);
       measureGeneral = createMeasureTool({
         map: mapGeneral,
@@ -2319,10 +2345,9 @@
   function renderMapDetail(records){
     if(!mapDetail){
       mapDetail = L.map("mapDetail");
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-        maxZoom:20,
-        subdomains:"abcd",
-        attribution:"&copy; OpenStreetMap contributors &copy; CARTO"
+      L.tileLayer("https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png", {
+        maxZoom:19,
+        attribution:"Wikimedia maps beta | Map data &copy; OpenStreetMap contributors"
       }).addTo(mapDetail);
       measureDetail = createMeasureTool({
         map: mapDetail,
